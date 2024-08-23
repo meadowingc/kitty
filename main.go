@@ -32,7 +32,7 @@ func main() {
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM)
 
-	const portNum = ":6235"
+	const portNum = ":6835"
 	go func() {
 		log.Printf("Running on http://localhost%s", portNum)
 		if err := http.ListenAndServe(portNum, r); err != nil {
