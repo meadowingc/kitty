@@ -1,0 +1,54 @@
+{{template "layout.html" .}}
+
+{{define "title"}}Guestbook List{{end}}
+
+{{define "content"}}
+<div><a href="/admin/">👈 Go back to guestbook list</a></div>
+<br>
+<div><a href="/admin/guestbook/{{.Data.ID}}/edit">Edit Guestbook</a></div>
+<div><a target="_blank" href="/guestbook/{{.Data.ID}}">View public link</a></div>
+<div><a href="/admin/guestbook/{{.Data.ID}}/embed">Embedding instructions</a></div>
+
+<h2>Guestbook Details</h2>
+<p>
+    <b>Website URL:</b> {{.Data.WebsiteURL}} <br>
+    <b>Requires message approval:</b> {{.Data.RequiresApproval}}
+</p>
+
+<h3>Messages</h3>
+{{if .Data.Messages}}
+<small>Tip: go to <code>Edit</code> to change whether a message is approved or not.</small>
+<ul>
+    {{range .Data.Messages}}
+    <li>
+        {{if .Website}}
+        <strong><a href="{{.Website}}" target="_blank" rel="noopener noreferrer">{{.Name}}</a>:</strong> {{.Text}}
+        {{else}}
+        <strong>{{.Name}}:</strong> {{.Text}}
+        {{end}}
+        <ul class="guestbook-actions">
+            <li>
+                {{if .Approved}}
+                <code>(Approved)</code>
+                {{else}}
+                <code>(Not approved)</code>
+                {{end}}
+            </li>
+            <li>
+                <a href="/admin/guestbook/{{$.Data.ID}}/message/{{.ID}}/edit">Edit</a> |
+                <form action="/admin/guestbook/{{$.Data.ID}}/message/{{.ID}}/delete" method="post"
+                    onsubmit="return confirm('Are you sure?');" style="display: inline;">
+                    <button type="submit"
+                        style="padding: 0; background: transparent; color: var(--color-primary); display: inline;">
+                        Delete
+                    </button>
+                </form>
+            </li>
+        </ul>
+    </li>
+    {{end}}
+</ul>
+{{else}}
+<p>No messages found for this guestbook.</p>
+{{end}}
+{{end}}

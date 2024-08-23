@@ -1,0 +1,127 @@
+{{template "layout.html" .}}
+
+{{define "title"}}Guestbook List{{end}}
+
+{{define "content"}}
+<style>
+    .form-group {
+        display: flex;
+        align-items: left;
+        text-align: left;
+        margin-bottom: 10px;
+    }
+
+    .form-group label {
+        flex: 1;
+        margin-right: 10px;
+        text-align: right;
+    }
+
+    .form-group input,
+    .form-group textarea {
+        flex: 6;
+    }
+
+    .form-group input[type="checkbox"] {
+        flex: 0;
+        margin-left: 10px;
+    }
+
+    textarea[name="body"] {
+        width: 100%;
+        height: 20em;
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        font-family: Arial, sans-serif;
+        font-size: 14px;
+        resize: vertical;
+    }
+
+    @media (max-width: 600px) {
+        .form-group {
+            flex-direction: column;
+        }
+
+        .form-group label {
+            text-align: left;
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+        }
+
+        .form-group input[type="checkbox"] {
+            margin-left: 0;
+            width: 1em;
+        }
+    }
+</style>
+
+
+{{$isEditing := (and .Data (or .Data.ID false))}}
+<h1>{{if $isEditing}}Edit{{else}}New{{end}} Guestbook</h1>
+<div>
+    {{ $formActionUrl := "/dashboard/post/new" }} <!-- Default URL -->
+    {{ if $isEditing }}
+    {{ $formActionUrl = printf "/admin/guestbook/%d" .Data.ID }} <!-- Overwrite URL if $isEditing is truthy -->
+    {{ end }}
+
+    <form action="{{ $formActionUrl }}" method="post">
+        <h4>Post Details</h4>
+        <div class="form-group">
+            <label for="title">Title:</label>
+            <input type="text" id="title" name="title" {{if $isEditing}}value="{{.Data.Title}}" {{end}} required>
+        </div>
+        <div class="form-group">
+            <label for="link">Link:</label>
+            <input type="text" id="link" name="link" {{if $isEditing}}value="{{.Data.Link}}" {{end}}
+                placeholder="If not provided, the title will slugified and used as the link">
+        </div>
+        <div class="form-group">
+            <label for="publishedDate">Published Date:</label>
+            <input type="datetime-local" id="publishedDate" name="publishedDate" {{if
+                $isEditing}}value="{{.Data.PublishedDate.Format " 2006-01-02T15:04"}}"{{end}} required>
+        </div>
+        <div class="form-group">
+            <label for="metaDescription">Meta Description:</label>
+            <input type="text" id="metaDescription" name="metaDescription" {{if
+                $isEditing}}value="{{.Data.MetaDescription}}" {{end}}>
+        </div>
+        <div class="form-group">
+            <label for="metaImage">Meta Image:</label>
+            <input type="text" id="metaImage" name="metaImage" {{if $isEditing}}value="{{.Data.MetaImage}}" {{end}}>
+        </div>
+        <div class="form-group">
+            <label for="lang">Language:</label>
+            <input type="text" id="lang" name="lang" {{if $isEditing}}value="{{.Data.Lang}}" {{else}}value="en" {{end}}
+                required>
+        </div>
+        <div class="form-group">
+            <label for="tags">Tags (comma-separated):</label>
+            <input type="text" id="tags" name="tags" {{if $isEditing}}value="{{.Data.Tags | jsonListToCommaSeparated}}"
+                {{end}}>
+        </div>
+        <div class="form-group">
+            <label for="makeDiscoverable">Make Discoverable:</label>
+            <input type="checkbox" id="makeDiscoverable" name="makeDiscoverable" {{if and $isEditing
+                .Data.MakeDiscoverable}}checked{{end}}>
+        </div>
+        <div class="form-group">
+            <label for="isPage">Is Page:</label>
+            <input type="checkbox" id="isPage" name="isPage" {{if and $isEditing .Data.IsPage}}checked{{end}}>
+        </div>
+        <br>
+        <div>
+            <label for="body">Body:</label>
+            <textarea id="body" name="body" required>{{if $isEditing}}{{.Data.Body}}{{end}}</textarea>
+        </div>
+        <br>
+        <div>
+            <input type="submit" value="{{if $isEditing}}Update{{else}}Create{{end}} Post">
+        </div>
+        <br>
+    </form>
+</div>
+{{end}}

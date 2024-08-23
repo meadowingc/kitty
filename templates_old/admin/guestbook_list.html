@@ -1,0 +1,41 @@
+{{template "layout.html" .}}
+
+{{define "title"}}Guestbook List{{end}}
+
+{{define "content"}}
+<h1>Guestbook List</h1>
+<a href="/admin/guestbook/new">Create New Guestbook</a>
+<table>
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Website URL</th>
+            <th>Share</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {{range .Data}}
+        <tr>
+            <td>{{.ID}}</td>
+            <td>{{.WebsiteURL}}</td>
+            <td>
+                <a href="/guestbook/{{.ID}}">Public Link</a> |
+                <a href="/admin/guestbook/{{.ID}}/embed">Embed</a>
+            </td>
+            <td>
+                <a href="/admin/guestbook/{{.ID}}">Manage</a> |
+                <a href="/admin/guestbook/{{.ID}}/edit">Edit</a> |
+                <form action="/admin/guestbook/{{.ID}}/delete" method="post" style="display: inline;">
+                    <input class="link" type="submit" value="Delete" onclick="return confirm('Are you sure?');">
+                </form>
+            </td>
+        </tr>
+        {{else}}
+        <tr>
+            <td colspan="3">No guestbooks found.</td>
+        </tr>
+        {{end}}
+    </tbody>
+</table>
+{{end}}

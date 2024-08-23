@@ -1,0 +1,63 @@
+{{template "layout.html" .}}
+
+{{define "title"}}Embedding Instructions{{end}}
+
+{{define "content"}}
+<p>
+    There are two ways to embed a Guestbook into your site. The easiest way is
+    using an <code>iframe</code>, but it doesn't allow you to personalize the
+    style in any way. If you want more control then you can use JavaScript to
+    create the guestbook form and populate the messages for you, but it's up to
+    you to style the form.
+</p>
+
+
+<div class="embed-instructions">
+    <h2>Embed with an iframe</h2>
+    <p>Copy and paste the following code into your website's HTML to embed this guestbook form:</p>
+    <pre>
+<code class="language-html" data-lang="html">
+&lt;iframe src="{{.Data.PublicHostUrl}}/guestbook/{{.Data.Guestbook.ID}}" width="300" height="500" frameborder="0">&lt;/iframe>
+</code>
+</pre>
+</div>
+
+<div class="embed-instructions">
+    <h2>Embed with JavaScript</h2>
+    <p>
+        Copy and paste the following code into your website's HTML where you to embed this guestbook form. Feel free to
+        edit the HTML as you see fit but don't change the <code>name</code> attribute of the <code>input</code> tags,
+        nor the tag <code>id</code>s! Feel free to <a target="_blank" href="https://meadow.cafe/mailbox/">reach
+            out</a> if you need help or have any questions.
+    </p>
+    <pre>
+<code class="language-html" data-lang="html">
+&lt;script async src="{{.Data.PublicHostUrl}}/resources/js/embed_script/{{.Data.Guestbook.ID}}/script.js">&lt;/script> 
+&lt;div id="guestbooks___guestbook-form-container">
+    &lt;form id="guestbooks___guestbook-form" action="{{.Data.PublicHostUrl}}/guestbook/{{.Data.Guestbook.ID}}/submit" method="post">
+        &lt;div class="guestbooks___input-container">
+            &lt;input placeholder="Name" type="text" id="name" name="name" required>
+        &lt;/div>
+        &lt;div class="guestbooks___input-container">
+            &lt;input placeholder="Website (optional)" type="url" id="website" name="website">
+        &lt;/div>
+        &lt;div id="guestbooks___challenge—answer—container">&lt;/div>  
+        &lt;br/>
+        &lt;div class="guestbooks___input-container">
+            &lt;textarea placeholder="Message (plain text only)..." id="text" name="text" style="width: 100%; box-sizing: border-box; resize: vertical;" required>&lt;/textarea>
+        &lt;/div>
+        &lt;br/>
+        &lt;input type="submit" value="Submit">
+        &lt;div id="guestbooks___error-message">&lt;/div>  
+    &lt;/form>
+&lt;/div>
+&lt;div id="guestbooks___guestbook-made-with" style="text-align: right;">
+    &lt;small>Lovingly made with &lt;a target="_blank" href="{{.Data.PublicHostUrl}}">Guestbooks&lt;/a>&lt;/small>
+&lt;/div>  
+&lt;hr style="margin: 1em 0;"/>
+&lt;h3 id="guestbooks___guestbook-messages-header">Messages&lt;/h3>
+&lt;div id="guestbooks___guestbook-messages-container">&lt;/div>  
+</code>
+</pre>
+</div>
+{{end}}

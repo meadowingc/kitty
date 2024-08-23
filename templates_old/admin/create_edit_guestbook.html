@@ -1,0 +1,88 @@
+{{template "layout.html" .}}
+
+{{define "title"}}Guestbook List{{end}}
+
+{{define "content"}}
+
+{{$isEditing := (and .Data (or .Data.ID false))}}
+<h1>{{if $isEditing}}Edit{{else}}New{{end}} Guestbook</h1>
+<div>
+    {{ $formActionUrl := "/admin/guestbook/new" }} <!-- Default URL -->
+    {{ if $isEditing }}
+    {{ $formActionUrl = printf "/admin/guestbook/%d/edit" .Data.ID }} <!-- Overwrite URL if $isEditing is truthy -->
+    {{ end }}
+
+    <form action="{{ $formActionUrl }}" method="post">
+        <h4>Basic info</h4>
+        <div>
+            <label for="websiteURL">Website URL:</label>
+            <input type="text" id="websiteURL" name="websiteURL" {{if $isEditing}}value="{{.Data.WebsiteURL}}" {{end}}
+                required>
+        </div>
+        <br>
+        <div>
+            <label for="requiresApproval">Messages require approval before being publicly displayed:</label>
+            <input type="checkbox" id="requiresApproval" name="requiresApproval" {{if and $isEditing .Data.RequiresApproval}}checked{{end}}>
+            <div>
+                <small>
+                    Tip: if you require message approval then it is recommended you also 
+                    enable email notifications in your <a href="/admin/settings">user settings</a>.
+                </small>
+            </div>
+        </div>
+        <br>
+        <h4>Anti Bot verification</h4>
+        <div>
+            <small>
+                The following options will allow you to set a question that
+                whoever is submitting your guestbook will have to answer, and if
+                they fail to do so then they won't be able to submit the
+                message. This is a rudimentary measure against automated bots.
+                For example, the question can be <i>What is my name?</i> or
+                <i>Does water boil at 100 C?</i>
+            </small>
+        </div>
+        <br>
+        <div>
+            <label for="challengeQuestion">Verification Question (leave empty if you don't want to use it):</label>
+            <input 
+                type="text" id="challengeQuestion" name="challengeQuestion"
+                placeholder="Is water wet?"
+                {{if $isEditing}}value="{{.Data.ChallengeQuestion}}" {{end}}
+            >
+        </div>
+        <br>
+        <div>
+            <label for="challengeHint">Hint that will be shown to users (optional):</label>
+            <input 
+                type="text" id="challengeHint" name="challengeHint" 
+                placeholder="yes/no"
+                {{if $isEditing}}value="{{.Data.ChallengeHint}}" {{end}}
+            >
+        </div>
+        <br>
+        <div>
+            <label for="challengeFailedMessage">Message to show the user in case they fail to answer the challenge:</label>
+            <input 
+                type="text" id="challengeFailedMessage" name="challengeFailedMessage" 
+                placeholder="Please answer yes or no."
+                {{if $isEditing}}value="{{.Data.ChallengeFailedMessage}}" {{else}}value="The provided answer to the challenge question is invalid!" {{end}}
+            >
+        </div>
+        <br>
+        <div>
+            <label for="challengeAnswer">Expected answer to the verification question (case insensitive):</label>
+            <input 
+                type="text" id="challengeAnswer" name="challengeAnswer" 
+                placeholder="yes"
+                {{if $isEditing}}value="{{.Data.ChallengeAnswer}}" {{end}}
+            >
+        </div>
+        <br>
+        <div>
+            <input type="submit" value="{{if $isEditing}}Update{{else}}Create{{end}} Guestbook">
+        </div>
+        <br>
+    </form>
+</div>
+{{end}}
