@@ -7,6 +7,7 @@ require (
 	github.com/go-chi/chi/v5 v5.1.0
 	github.com/go-chi/cors v1.2.1
 	github.com/go-chi/httprate v0.14.0
+	github.com/gomarkdown/markdown v0.0.0-20240730141124-034f12af3bf6
 	github.com/gosimple/slug v1.14.0
 	golang.org/x/crypto v0.26.0
 	gorm.io/datatypes v1.2.1

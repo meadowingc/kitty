@@ -1,49 +1,17 @@
-<!DOCTYPE html>
-<html lang="en">
+{{template "layout.html" .}}
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="/assets/css/chota.min.css">
-    <link rel="icon"
-        href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>😺</text></svg>">
-    <title>{{.Global.SiteName}} - {{.WebsiteURL}}</title>
-</head>
+{{define "title"}}{{.Data.Title}}{{end}}
 
-<body>
-    <div class="container">
+{{define "content"}}
+<h1>{{.Data.Title}}</h1>
+<p>
+    <i>
+        <time datetime="{{.Data.PublishedDate | dateFmt "2006-01-02T15:04Z"}}">
+            {{.Data.PublishedDate | dateFmt "Jan 02, 2006"}}
+        </time>
+    </i>
+</p>
 
-        <main>
-            <h1>Guestbook for {{.WebsiteURL}}</h1>
+{{.Data.Body | parseMarkdown}}
 
-            <script async src="/resources/js/embed_script/{{.ID}}/script.js"></script>
-            <div id="guestbooks___guestbook-form-container">
-                <form id="guestbooks___guestbook-form" action="/guestbook/{{.ID}}/submit" method="post">
-                    <div class="guestbooks___input-container">
-                        <input placeholder="Name" type="text" id="name" name="name" required>
-                    </div>
-                    <div class="guestbooks___input-container">
-                        <input placeholder="Website (optional)" type="url" id="website" name="website">
-                    </div>
-                    <div id="guestbooks___challenge—answer—container"></div>
-                    <br />
-                    <div class="guestbooks___input-container">
-                        <textarea placeholder="Message (plain text only)..." id="text" name="text" style="width: 100%; box-sizing: border-box; resize: vertical;"
-                            required></textarea>
-                    </div>
-                    <br />
-                    <input type="submit" value="Submit">
-                    <div id="guestbooks___error-message"></div>
-                </form>
-            </div>
-            <div id="guestbooks___guestbook-made-with" style="text-align: right;">
-                <small>Lovingly made with <a target="_blank" href="/">Guestbooks</a></small>
-            </div>
-            <hr style="margin: 1em 0;" />
-            <h3 id="guestbooks___guestbook-messages-header">Messages</h3>
-            <div id="guestbooks___guestbook-messages-container"></div>
-        </main>
-    </div>
-</body>
-
-</html>
+{{end}}

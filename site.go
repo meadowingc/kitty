@@ -18,6 +18,9 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/gomarkdown/markdown"
+	"github.com/gomarkdown/markdown/html"
+	"github.com/gomarkdown/markdown/parser"
 	"github.com/gosimple/slug"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/datatypes"
@@ -68,6 +71,20 @@ func renderTemplate(w http.ResponseWriter, r *http.Request, templateName string,
 					tags[i] = strings.TrimSpace(tag)
 				}
 				return strings.Join(tags, ", ")
+			},
+			"parseMarkdown": func(markdownStr string) template.HTML {
+				extensions := parser.CommonExtensions | parser.AutoHeadingIDs | parser.NoEmptyLineBeforeBlock
+				p := parser.NewWithExtensions(extensions)
+				doc := p.Parse([]byte(markdownStr))
+
+				// create HTML renderer with extensions
+				htmlFlags := html.CommonFlags | html.HrefTargetBlank
+				opts := html.RendererOptions{Flags: htmlFlags}
+				renderer := html.NewRenderer(opts)
+
+				rendered := markdown.Render(doc, renderer)
+
+				return template.HTML(rendered)
 			},
 			"dateFmt": func(layout string, t time.Time) string {
 				return t.Format(layout)
