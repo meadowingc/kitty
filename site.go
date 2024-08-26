@@ -74,7 +74,7 @@ func renderTemplate(w http.ResponseWriter, r *http.Request, templateName string,
 				return strings.Join(tags, ", ")
 			},
 			"parseMarkdown": func(markdownStr string) template.HTML {
-				extensions := parser.CommonExtensions | parser.AutoHeadingIDs | parser.NoEmptyLineBeforeBlock
+				extensions := parser.CommonExtensions | parser.AutoHeadingIDs
 				p := parser.NewWithExtensions(extensions)
 				doc := p.Parse([]byte(markdownStr))
 
@@ -300,7 +300,7 @@ func userPostList(w http.ResponseWriter, r *http.Request) {
 	adminUser := getSignedInUserOrFail(r)
 
 	var posts []Post
-	result := db.Where(&Post{AdminUserID: adminUser.ID}).Find(&posts)
+	result := db.Where(&Post{AdminUserID: adminUser.ID}).Order("published_date DESC").Find(&posts)
 	if result.Error != nil {
 		http.Error(w, "Error fetching posts", http.StatusInternalServerError)
 		return
@@ -414,17 +414,17 @@ func importPosts(w http.ResponseWriter, r *http.Request) {
 			}
 
 			post := Post{
-				Title:            record[3],
-				Slug:             slug,
-				PublishedDate:    publishedDate,
-				Tags:             tags,
-				MakeDiscoverable: record[9] == "TRUE" || record[9] == "true" || record[9] == "True",
-				IsPage:           record[10] == "TRUE" || record[10] == "true" || record[9] == "True",
-				Body:             record[12],
-				MetaDescription:  record[14],
-				MetaImage:        record[15],
-				Lang:             lang,
-				AdminUserID:      user.ID,
+				Title:           record[3],
+				Slug:            slug,
+				PublishedDate:   publishedDate,
+				Tags:            tags,
+				Published:       record[9] == "TRUE" || record[9] == "true" || record[9] == "True",
+				IsPage:          record[11] == "TRUE" || record[11] == "true" || record[11] == "True",
+				Body:            record[12],
+				MetaDescription: record[14],
+				MetaImage:       record[15],
+				Lang:            lang,
+				AdminUserID:     user.ID,
 			}
 			incomingPosts = append(incomingPosts, post)
 		}
@@ -488,7 +488,7 @@ func buildPostFromFormRequest(r *http.Request) (Post, error) {
 	metaImage := r.FormValue("metaImage")
 	lang := r.FormValue("lang")
 	tags := r.FormValue("tags")
-	makeDiscoverable := r.FormValue("makeDiscoverable") == "on"
+	published := r.FormValue("published") == "on"
 
 	tagsJSON, err := json.Marshal(strings.Split(tags, ","))
 	if err != nil {
@@ -496,17 +496,17 @@ func buildPostFromFormRequest(r *http.Request) (Post, error) {
 	}
 
 	newPost := Post{
-		AdminUserID:      adminUser.ID,
-		Title:            title,
-		Body:             body,
-		Slug:             slug,
-		PublishedDate:    publishedDate,
-		IsPage:           isPage,
-		MetaDescription:  metaDescription,
-		MetaImage:        metaImage,
-		Lang:             lang,
-		Tags:             datatypes.JSON(tagsJSON),
-		MakeDiscoverable: makeDiscoverable,
+		AdminUserID:     adminUser.ID,
+		Title:           title,
+		Body:            body,
+		Slug:            slug,
+		PublishedDate:   publishedDate,
+		IsPage:          isPage,
+		MetaDescription: metaDescription,
+		MetaImage:       metaImage,
+		Lang:            lang,
+		Tags:            datatypes.JSON(tagsJSON),
+		Published:       published,
 	}
 
 	return newPost, nil
@@ -589,7 +589,7 @@ func editPost(w http.ResponseWriter, r *http.Request) {
 		post.MetaImage = newPostData.MetaImage
 		post.Lang = newPostData.Lang
 		post.Tags = newPostData.Tags
-		post.MakeDiscoverable = newPostData.MakeDiscoverable
+		post.Published = newPostData.Published
 
 		result = db.Save(&post)
 		if result.Error != nil {

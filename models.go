@@ -9,17 +9,17 @@ import (
 
 type Post struct {
 	gorm.Model
-	AdminUserID      uint `gorm:"index"`
-	Title            string
-	Body             string `gorm:"type:text"`
-	Slug             string
-	PublishedDate    time.Time
-	IsPage           bool
-	MetaDescription  string
-	MetaImage        string
-	Lang             string
-	Tags             datatypes.JSON
-	MakeDiscoverable bool
+	AdminUserID     uint `gorm:"index"`
+	Title           string
+	Body            string `gorm:"type:text"`
+	Slug            string
+	PublishedDate   time.Time
+	IsPage          bool
+	MetaDescription string
+	MetaImage       string
+	Lang            string
+	Tags            datatypes.JSON
+	Published       bool
 }
 
 type AdminUser struct {

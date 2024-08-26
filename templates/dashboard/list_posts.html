@@ -73,6 +73,11 @@
         <a href="/dashboard/post/{{.ID}}">
             {{.Title}}
         </a>
+        {{if not .Published}}
+        <small>
+            (Draft)
+        </small>
+        {{end}}
     </li>
     {{end}}
 </ul>

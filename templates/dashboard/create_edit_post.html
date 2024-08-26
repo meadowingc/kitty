@@ -162,9 +162,8 @@
                 required>
         </div>
         <div class="form-group">
-            <label for="makeDiscoverable">Published:</label>
-            <input type="checkbox" id="makeDiscoverable" name="makeDiscoverable" {{if and $isEditing
-                .Data.MakeDiscoverable}}checked{{end}}>
+            <label for="published">Published:</label>
+            <input type="checkbox" id="published" name="published" {{if and $isEditing .Data.Published}}checked{{end}}>
         </div>
         <div class="form-group">
             <label for="isPage">Is Page:</label>
