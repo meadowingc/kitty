@@ -8,18 +8,20 @@
     <link rel="stylesheet" href="/assets/css/main.css">
     <link rel="icon"
         href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>😺</text></svg>">
-    <title>Kitty - {{template "title" .}}</title>
+    <title>{{.Global.SiteName}} - {{template "title" .}}</title>
+
+    {{block "styles" .}}{{end}}
 </head>
 
 <body>
     <header>
         <a class="title" href="/">
             <h1>
-                😺 Kitty </h1>
+                😺 {{.Global.SiteName}} </h1>
         </a>
         <nav class="nav-right">
             {{if .Global.CurrentUser}}
-            <div style="display: inline;">Welcome, {{.Global.CurrentUser.Username}} |</div>
+            <a href="/dashboard">Dashboard</a> |
             <form action="/logout" method="post" style="display: inline;">
                 <input type="submit" value="Logout" class="button-link">
             </form>
@@ -38,7 +40,7 @@
 
     <footer style="padding:25px 0;">
         <span id="footer-directive">
-            <div><small><i>This project is <a href="https://codeberg.org/meadowingc/guestbooks">open
+            <div><small><i>This project is <a href="https://codeberg.org/meadowingc/kitty">open
                             source</a>! Any contributions are welcome.</i></small>
             </div>
         </span>
@@ -78,6 +80,8 @@
             document.body.innerHTML = '<h1 style="text-align: center; margin-top: 20%;">We\'re sad to see you go, but we respect your cookie choices. Have a cookie-free day!</h1>';
         }
     </script>
+
+    {{block "scripts" .}}{{end}}
 </body>
 
 </html>

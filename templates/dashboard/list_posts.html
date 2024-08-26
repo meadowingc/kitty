@@ -2,40 +2,73 @@
 
 {{define "title"}}Guestbook List{{end}}
 
+{{define "styles"}}
+<style type="text/css">
+    ul.post-list {
+        list-style-type: none;
+        padding: unset;
+    }
+
+    ul.post-list li {
+        display: flex;
+        align-items: baseline;
+        padding: 10px 0;
+        border-bottom: 1px solid #eceff4;
+    }
+
+    ul.post-list li span {
+        flex: 0 0 130px;
+    }
+
+    ul.post-list li span.number {
+        flex: 0 0 50px;
+    }
+
+    ul.post-list li a {
+        flex: max-content;
+    }
+
+    ul.post-list li small {
+        text-align: right;
+        flex: 0 0 115px;
+    }
+
+    ul.blog-posts li a:visited {
+        color: var(--visited-color);
+    }
+
+    time {
+        font-family: monospace;
+        font-size: 15px;
+    }
+</style>
+{{end}}
+
 {{define "content"}}
-<h1>Guestbook List</h1>
-<a href="/admin/guestbook/new">Create New Guestbook</a>
-<table>
-    <thead>
-        <tr>
-            <th>ID</th>
-            <th>Website URL</th>
-            <th>Share</th>
-            <th>Actions</th>
-        </tr>
-    </thead>
-    <tbody>
-        {{range .Data}}
-        <tr>
-            <td>{{.ID}}</td>
-            <td>{{.WebsiteURL}}</td>
-            <td>
-                <a href="/guestbook/{{.ID}}">Public Link</a> |
-                <a href="/admin/guestbook/{{.ID}}/embed">Embed</a>
-            </td>
-            <td>
-                <a href="/admin/guestbook/{{.ID}}">Manage</a> |
-                <a href="/admin/guestbook/{{.ID}}/edit">Edit</a> |
-                <form action="/admin/guestbook/{{.ID}}/delete" method="post" style="display: inline;">
-                    <input class="link" type="submit" value="Delete" onclick="return confirm('Are you sure?');">
-                </form>
-            </td>
-        </tr>
-        {{else}}
-        <tr>
-            <td colspan="3">No guestbooks found.</td>
-        </tr>
-        {{end}}
-    </tbody>
-</table>
+<h1>Post List</h1>
+
+<a href="/dashboard/post/new">
+    <button>
+        New post
+    </button>
+</a>
+
+{{if .Data}}
+<ul class="post-list">
+    {{range .Data}}
+    <li>
+        <span>
+            <time datetime="{{.PublishedDate | dateFmt " 2006-01-02"}}">
+                {{.PublishedDate | dateFmt "Jan 02, 2006"}}
+            </time>
+        </span>
+        <a href="/dashboard/post/{{.ID}}">
+            {{.Title}}
+        </a>
+    </li>
+    {{end}}
+</ul>
+{{else}}
+<p style="text-align: center;">No posts found.</p>
+{{end}}
 {{end}}

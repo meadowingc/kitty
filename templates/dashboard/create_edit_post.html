@@ -2,7 +2,7 @@
 
 {{define "title"}}Guestbook List{{end}}
 
-{{define "content"}}
+{{define "styles"}}
 <style>
     .form-group {
         display: flex;
@@ -27,15 +27,35 @@
         margin-left: 10px;
     }
 
+    button[type="submit"],
+    input[type="submit"] {
+        padding: 0.7em;
+        border-radius: 5px;
+    }
+
     textarea[name="body"] {
         width: 100%;
         height: 20em;
-        padding: 10px;
-        border: 1px solid #ccc;
-        border-radius: 4px;
-        font-family: Arial, sans-serif;
-        font-size: 14px;
         resize: vertical;
+    }
+
+    textarea,
+    input:not([type="submit"]) {
+        background-color: #eceff4;
+        border: none;
+        line-height: 1.7;
+        outline: none;
+        color: inherit;
+        padding: 10px;
+        font-size: 18px;
+    }
+
+    @media (prefers-color-scheme: dark) {
+
+        textarea,
+        input:not([type="submit"]) {
+            background-color: #004052;
+        }
     }
 
     @media (max-width: 600px) {
@@ -58,17 +78,31 @@
         }
     }
 </style>
+{{end}}
 
+{{define "content"}}
 
 {{$isEditing := (and .Data (or .Data.ID false))}}
-<h1>{{if $isEditing}}Edit{{else}}New{{end}} Guestbook</h1>
+<h1>{{if $isEditing}}Edit{{else}}New{{end}} Post</h1>
 <div>
     {{ $formActionUrl := "/dashboard/post/new" }} <!-- Default URL -->
     {{ if $isEditing }}
-    {{ $formActionUrl = printf "/admin/guestbook/%d" .Data.ID }} <!-- Overwrite URL if $isEditing is truthy -->
+    {{ $formActionUrl = printf "/dashboard/post/%d" .Data.ID }} <!-- Overwrite URL if $isEditing is truthy -->
+    {{ end }}
+
+
+    {{ if $isEditing }}
+    <form action="{{ printf " /dashboard/post/%d/delete" .Data.ID }}" method="post"
+        onsubmit="return confirm('Are you sure you want to delete this post?');">
+        <input type="submit" value="Delete Post" style="float: right;">
+    </form>
     {{ end }}
 
     <form action="{{ $formActionUrl }}" method="post">
+        <div class="action-buttons">
+            <input type="submit" value="{{if $isEditing}}Update{{else}}Create{{end}} Post">
+        </div>
+        <br>
         <h4>Post Details</h4>
         <div class="form-group">
             <label for="title">Title:</label>
@@ -81,8 +115,18 @@
         </div>
         <div class="form-group">
             <label for="publishedDate">Published Date:</label>
-            <input type="datetime-local" id="publishedDate" name="publishedDate" {{if
-                $isEditing}}value="{{.Data.PublishedDate.Format " 2006-01-02T15:04"}}"{{end}} required>
+            {{$dateVal := ""}}
+            {{ if $isEditing }}
+            {{ $dateVal = .Data.PublishedDate | dateFmt "2006-01-02T15:04" }}
+            {{ else }}
+            {{ $dateVal = now | dateFmt "2006-01-02T15:04" }}
+            {{ end }}
+            <input type="datetime-local" id="publishedDate" name="publishedDate" value="{{ $dateVal }}" required>
+        </div>
+        <div class="form-group">
+            <label for="tags">Tags (comma-separated):</label>
+            <input type="text" id="tags" name="tags" {{if $isEditing}}value="{{.Data.Tags | jsonListToCommaSeparated}}"
+                {{end}}>
         </div>
         <div class="form-group">
             <label for="metaDescription">Meta Description:</label>
@@ -90,18 +134,13 @@
                 $isEditing}}value="{{.Data.MetaDescription}}" {{end}}>
         </div>
         <div class="form-group">
-            <label for="metaImage">Meta Image:</label>
+            <label for="metaImage">Meta Image URL:</label>
             <input type="text" id="metaImage" name="metaImage" {{if $isEditing}}value="{{.Data.MetaImage}}" {{end}}>
         </div>
         <div class="form-group">
             <label for="lang">Language:</label>
             <input type="text" id="lang" name="lang" {{if $isEditing}}value="{{.Data.Lang}}" {{else}}value="en" {{end}}
                 required>
-        </div>
-        <div class="form-group">
-            <label for="tags">Tags (comma-separated):</label>
-            <input type="text" id="tags" name="tags" {{if $isEditing}}value="{{.Data.Tags | jsonListToCommaSeparated}}"
-                {{end}}>
         </div>
         <div class="form-group">
             <label for="makeDiscoverable">Make Discoverable:</label>
@@ -115,12 +154,10 @@
         <br>
         <div>
             <label for="body">Body:</label>
-            <textarea id="body" name="body" required>{{if $isEditing}}{{.Data.Body}}{{end}}</textarea>
+            <textarea name="body" id="body" style="min-height: 500px;border-top: 1px solid lightgrey;"
+                placeholder="...">{{if $isEditing}}{{.Data.Body}}{{end}}</textarea>
         </div>
         <br>
-        <div>
-            <input type="submit" value="{{if $isEditing}}Update{{else}}Create{{end}} Post">
-        </div>
         <br>
     </form>
 </div>

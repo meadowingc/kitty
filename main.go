@@ -87,6 +87,7 @@ func initRouter() *chi.Mux {
 	r.Use(middleware.Logger)
 	r.Use(httprate.LimitByIP(100, time.Minute)) // general rate limiter for all routes (shared across all routes)
 	r.Use(middleware.Recoverer)
+	r.Use(TryPutUserInContextMiddleware)
 
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
 		renderTemplate(w, r, "home", nil)
@@ -99,11 +100,12 @@ func initRouter() *chi.Mux {
 	r.HandleFunc("/signup", userSignUp)
 	r.Post("/logout", userLogout)
 
-	r.With(AuthMiddleware).Route("/dashboard", func(r chi.Router) {
+	r.With(AuthProtectedMiddleware).Route("/dashboard", func(r chi.Router) {
 		r.Get("/", userPostList)
 
 		r.HandleFunc("/post/new", createPost)
 		r.HandleFunc("/post/{postID}", editPost)
+		r.HandleFunc("/post/{postID}/delete", deletePost)
 	})
 
 	r.Get("/post/{postID}", publicViewPost)

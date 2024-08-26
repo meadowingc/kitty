@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"html/template"
 	"kitty/constants"
 	"log"
@@ -17,6 +18,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/gosimple/slug"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/datatypes"
 )
@@ -32,6 +34,8 @@ func renderTemplate(w http.ResponseWriter, r *http.Request, templateName string,
 	type GlobalTemplateData struct {
 		CurrentUser *AdminUser
 		IsDebug     bool
+		SiteName    string
+		PublicURL   string
 	}
 
 	templateData := struct {
@@ -41,6 +45,8 @@ func renderTemplate(w http.ResponseWriter, r *http.Request, templateName string,
 		Global: GlobalTemplateData{
 			CurrentUser: getSignedInUserOrNil(r),
 			IsDebug:     constants.DEBUG_MODE,
+			SiteName:    constants.APP_NAME,
+			PublicURL:   constants.PUBLIC_URL,
 		},
 		Data: data,
 	}
@@ -62,6 +68,12 @@ func renderTemplate(w http.ResponseWriter, r *http.Request, templateName string,
 					tags[i] = strings.TrimSpace(tag)
 				}
 				return strings.Join(tags, ", ")
+			},
+			"dateFmt": func(layout string, t time.Time) string {
+				return t.Format(layout)
+			},
+			"now": func() time.Time {
+				return time.Now()
 			},
 		})
 
@@ -104,18 +116,12 @@ func generateAuthToken() (string, error) {
 	return token, nil
 }
 
-func AuthMiddleware(next http.Handler) http.Handler {
+func TryPutUserInContextMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// if logout then just continue
-		if r.URL.Path == "/logout" {
-			next.ServeHTTP(w, r)
-			return
-		}
-
 		// try to set admin user into context
 		cookie, err := r.Cookie(string(AuthenticatedUserTokenCookieName))
 		if err != nil || cookie.Value == "" {
-			http.Redirect(w, r, "/signin", http.StatusSeeOther)
+			next.ServeHTTP(w, r)
 			return
 		}
 
@@ -130,14 +136,40 @@ func AuthMiddleware(next http.Handler) http.Handler {
 				Path:   "/",
 				MaxAge: -1,
 			})
-
-			http.Redirect(w, r, "/signin", http.StatusSeeOther)
+			next.ServeHTTP(w, r)
 			return
 		}
 
 		// Store the admin user in the context
 		ctx := context.WithValue(r.Context(), AuthenticatedUserCookieName, &user)
 		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
+func AuthProtectedMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// if logout then just continue
+		if r.URL.Path == "/logout" {
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		// check context for user
+		adminUser := getSignedInUserOrNil(r)
+		if adminUser == nil {
+			http.Redirect(w, r, "/signin", http.StatusSeeOther)
+			return
+		}
+
+		// try to set admin user into context
+		cookie, err := r.Cookie(string(AuthenticatedUserTokenCookieName))
+		if err != nil || cookie.Value == "" {
+			http.Redirect(w, r, "/signin", http.StatusSeeOther)
+			return
+		}
+
+		// otherwise, continue to the next handler
+		next.ServeHTTP(w, r)
 	})
 }
 
@@ -259,6 +291,34 @@ func userPostList(w http.ResponseWriter, r *http.Request) {
 	renderTemplate(w, r, "dashboard/list_posts", posts)
 }
 
+func tryParseDate(dateStr string) (time.Time, error) {
+	formats := []string{
+		"2006-01-02T15:04",
+		time.RFC3339,
+		time.RFC3339Nano,
+		time.RFC1123,
+		time.RFC1123Z,
+		time.RFC822,
+		time.RFC822Z,
+		time.RFC850,
+		time.ANSIC,
+		time.UnixDate,
+		time.RubyDate,
+		// custom formats
+		"Mon Jan 2 03:04:05 PM MST 2006",
+		"2006-01-02 15:04:05-07:00",
+	}
+
+	for _, layout := range formats {
+		date, err := time.Parse(layout, dateStr)
+		if err == nil {
+			return date, nil
+		}
+	}
+
+	return time.Time{}, fmt.Errorf("unable to parse date: %s", dateStr)
+}
+
 func buildPostFromFormRequest(r *http.Request) (Post, error) {
 	adminUser := getSignedInUserOrNil(r)
 	if adminUser == nil {
@@ -268,7 +328,7 @@ func buildPostFromFormRequest(r *http.Request) (Post, error) {
 	title := r.FormValue("title")
 	body := r.FormValue("body")
 	link := r.FormValue("link")
-	publishedDate, _ := time.Parse(time.RFC3339, r.FormValue("publishedDate"))
+	publishedDate, _ := tryParseDate(r.FormValue("publishedDate"))
 	isPage := r.FormValue("isPage") == "on"
 	metaDescription := r.FormValue("metaDescription")
 	metaImage := r.FormValue("metaImage")
@@ -307,6 +367,10 @@ func createPost(w http.ResponseWriter, r *http.Request) {
 		if e != nil {
 			http.Error(w, "Error creating post: "+e.Error(), http.StatusInternalServerError)
 			return
+		}
+
+		if newPost.Link == "" {
+			newPost.Link = slug.Make(newPost.Title)
 		}
 
 		result := db.Create(&newPost)
@@ -349,7 +413,12 @@ func editPost(w http.ResponseWriter, r *http.Request) {
 
 		post.Title = newPostData.Title
 		post.Body = newPostData.Body
+
 		post.Link = newPostData.Link
+		if post.Link == "" {
+			post.Link = slug.Make(post.Title)
+		}
+
 		post.PublishedDate = newPostData.PublishedDate
 		post.IsPage = newPostData.IsPage
 		post.MetaDescription = newPostData.MetaDescription
@@ -364,9 +433,31 @@ func editPost(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		http.Redirect(w, r, "/dashboard/post/"+postID, http.StatusOK)
+		http.Redirect(w, r, "/dashboard/post/"+postID, http.StatusSeeOther)
 
-	case "DELETE":
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+func deletePost(w http.ResponseWriter, r *http.Request) {
+	postID := chi.URLParam(r, "postID")
+
+	var post Post
+	result := db.First(&post, postID)
+	if result.Error != nil {
+		http.Error(w, "Post not found", http.StatusNotFound)
+		return
+	}
+
+	currentUser := getSignedInUserOrFail(r)
+	if post.AdminUserID != currentUser.ID {
+		http.Error(w, "You don't own this post", http.StatusUnauthorized)
+		return
+	}
+
+	switch r.Method {
+	case "POST":
 		result = db.Delete(&post)
 		if result.Error != nil {
 			http.Error(w, "Error deleting post", http.StatusInternalServerError)
