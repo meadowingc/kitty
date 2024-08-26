@@ -114,7 +114,7 @@
             <input type="submit" value="{{if $isEditing}}Update{{else}}Create{{end}} Post">
             {{ if $isEditing }}
             <div style="margin-bottom: 1em;">
-                <a href="/post/{{.Data.ID}}">
+                <a href="/post/{{.Data.ID}}" target="_blank">
                     View Post
                 </a>
                 <br>
@@ -128,9 +128,9 @@
             <input type="text" id="title" name="title" {{if $isEditing}}value="{{.Data.Title}}" {{end}} required>
         </div>
         <div class="form-group">
-            <label for="link">Link:</label>
-            <input type="text" id="link" name="link" {{if $isEditing}}value="{{.Data.Link}}" {{end}}
-                placeholder="If not provided, the title will slugified and used as the link">
+            <label for="slug">Slug:</label>
+            <input type="text" id="slug" name="slug" {{if $isEditing}}value="{{.Data.Slug}}" {{end}}
+                placeholder="If not provided, the title will be slugified">
         </div>
         <div class="form-group">
             <label for="publishedDate">Published Date:</label>
@@ -162,7 +162,7 @@
                 required>
         </div>
         <div class="form-group">
-            <label for="makeDiscoverable">Make Discoverable:</label>
+            <label for="makeDiscoverable">Published:</label>
             <input type="checkbox" id="makeDiscoverable" name="makeDiscoverable" {{if and $isEditing
                 .Data.MakeDiscoverable}}checked{{end}}>
         </div>

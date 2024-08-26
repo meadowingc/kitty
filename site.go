@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/base64"
+	"encoding/csv"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -308,6 +309,142 @@ func userPostList(w http.ResponseWriter, r *http.Request) {
 	renderTemplate(w, r, "dashboard/list_posts", posts)
 }
 
+func importPosts(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case "GET":
+		renderTemplate(w, r, "dashboard/import_posts", nil)
+	case "POST":
+		importType := r.FormValue("import_type")
+		if importType != "bearblog" {
+			http.Error(w, "Only BearBlog imports are supported. The import type you specified is not supported: "+importType, http.StatusBadRequest)
+			return
+		}
+
+		user := getSignedInUserOrFail(r)
+		allCurrentPosts := make(map[string]Post)
+
+		// Retrieve all current posts
+		var existingPosts []Post
+		result := db.Find(&existingPosts)
+		if result.Error != nil {
+			http.Error(w, "Failed to retrieve posts: "+result.Error.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		// Populate the map with slugs as keys and Post instances as values
+		for _, post := range existingPosts {
+			allCurrentPosts[post.Title] = post
+		}
+
+		overwriteExisting := r.FormValue("overwrite_existing") == "on"
+
+		// Parse the multipart form data
+		err := r.ParseMultipartForm(10 << 20) // Limit your max memory usage
+		if err != nil {
+			http.Error(w, "Failed to parse multipart form data: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		// Retrieve the file from the form data
+		file, _, err := r.FormFile("bear_export")
+		if err != nil {
+			http.Error(w, "Failed to retrieve file: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		defer file.Close()
+
+		// Parse the CSV file
+		reader := csv.NewReader(file)
+
+		// Read the header row
+		_, err = reader.Read()
+		if err != nil {
+			http.Error(w, "Failed to read CSV header: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		records, err := reader.ReadAll()
+		if err != nil {
+			http.Error(w, "Failed to parse CSV file: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		// Convert CSV records to Post structs
+		var incomingPosts []Post
+		for _, record := range records {
+			if len(record) < 2 {
+				http.Error(w, "Invalid CSV format", http.StatusBadRequest)
+				return
+			}
+
+			slug := slug.Make(record[4])
+			if _, exists := allCurrentPosts[slug]; exists {
+				if overwriteExisting {
+					// Delete the existing post
+					result := db.Delete(allCurrentPosts[slug])
+					if result.Error != nil {
+						http.Error(w, "Failed to delete existing post: "+result.Error.Error(), http.StatusInternalServerError)
+						return
+					}
+
+					// Remove the post from the map
+					delete(allCurrentPosts, slug)
+				} else {
+					// Skip this post
+					continue
+				}
+			}
+
+			publishedDate, err := tryParseDate(record[6])
+			if err != nil {
+				http.Error(w, "Failed to parse date: "+err.Error(), http.StatusBadRequest)
+				return
+			}
+
+			var tags datatypes.JSON
+			err = json.Unmarshal([]byte(record[8]), &tags)
+			if err != nil {
+				http.Error(w, "Failed to parse tags JSON: "+err.Error(), http.StatusBadRequest)
+				return
+			}
+
+			lang := "en"
+			if record[16] != "" {
+				lang = record[16]
+			}
+
+			post := Post{
+				Title:            record[3],
+				Slug:             slug,
+				PublishedDate:    publishedDate,
+				Tags:             tags,
+				MakeDiscoverable: record[9] == "TRUE" || record[9] == "true" || record[9] == "True",
+				IsPage:           record[10] == "TRUE" || record[10] == "true" || record[9] == "True",
+				Body:             record[12],
+				MetaDescription:  record[14],
+				MetaImage:        record[15],
+				Lang:             lang,
+				AdminUserID:      user.ID,
+			}
+			incomingPosts = append(incomingPosts, post)
+		}
+
+		// Insert the posts into the database
+		for _, post := range incomingPosts {
+			result := db.Create(&post)
+			if result.Error != nil {
+				http.Error(w, "Failed to insert post: "+result.Error.Error(), http.StatusInternalServerError)
+				return
+			}
+		}
+
+		http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
+
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
 func tryParseDate(dateStr string) (time.Time, error) {
 	formats := []string{
 		"2006-01-02T15:04",
@@ -344,7 +481,7 @@ func buildPostFromFormRequest(r *http.Request) (Post, error) {
 
 	title := r.FormValue("title")
 	body := r.FormValue("body")
-	link := r.FormValue("link")
+	slug := r.FormValue("slug")
 	publishedDate, _ := tryParseDate(r.FormValue("publishedDate"))
 	isPage := r.FormValue("isPage") == "on"
 	metaDescription := r.FormValue("metaDescription")
@@ -362,7 +499,7 @@ func buildPostFromFormRequest(r *http.Request) (Post, error) {
 		AdminUserID:      adminUser.ID,
 		Title:            title,
 		Body:             body,
-		Link:             link,
+		Slug:             slug,
 		PublishedDate:    publishedDate,
 		IsPage:           isPage,
 		MetaDescription:  metaDescription,
@@ -386,8 +523,18 @@ func createPost(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		if newPost.Link == "" {
-			newPost.Link = slug.Make(newPost.Title)
+		if newPost.Slug == "" {
+			newPost.Slug = slug.Make(newPost.Title)
+		}
+
+		existingSlugPost, err := getPostWithSlug(newPost.Slug)
+		if err != nil {
+			http.Error(w, "Error verifying if posts exists: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		if existingSlugPost != nil {
+			http.Error(w, "A post with the same slug already exists", http.StatusBadRequest)
+			return
 		}
 
 		result := db.Create(&newPost)
@@ -431,9 +578,9 @@ func editPost(w http.ResponseWriter, r *http.Request) {
 		post.Title = newPostData.Title
 		post.Body = newPostData.Body
 
-		post.Link = newPostData.Link
-		if post.Link == "" {
-			post.Link = slug.Make(post.Title)
+		post.Slug = newPostData.Slug
+		if post.Slug == "" {
+			post.Slug = slug.Make(post.Title)
 		}
 
 		post.PublishedDate = newPostData.PublishedDate

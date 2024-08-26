@@ -103,6 +103,8 @@ func initRouter() *chi.Mux {
 	r.With(AuthProtectedMiddleware).Route("/dashboard", func(r chi.Router) {
 		r.Get("/", userPostList)
 
+		r.HandleFunc("/import", importPosts)
+
 		r.HandleFunc("/post/new", createPost)
 		r.HandleFunc("/post/{postID}", editPost)
 		r.HandleFunc("/post/{postID}/delete", deletePost)

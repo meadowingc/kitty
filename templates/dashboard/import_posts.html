@@ -1,0 +1,40 @@
+{{template "layout.html" .}}
+
+{{define "title"}}Manage Post{{end}}
+
+{{define "styles"}}
+<style type="text/css">
+    label,
+    input {
+        display: block;
+    }
+
+    input[type="submit"] {
+        margin-top: 1em;
+        margin-bottom: 1em;
+    }
+</style>
+{{end}}
+
+{{define "content"}}
+<h1>Import Posts</h1>
+
+<br>
+
+<hr>
+<h2>Import from Bearblog</h2>
+<form action="/dashboard/import" method="post" enctype="multipart/form-data">
+    <label for="bear_export">Bear .csv export</label>
+    <input type="file" id="bear_export" name="bear_export">
+
+    <label style="display: inline;" for="overwrite_existing">Overwrite existing posts (if not they will just be ignored)</label>
+    <input style="display: inline;" type="checkbox" id="overwrite_existing" name="overwrite_existing" value="on" checked>
+    
+    <input type="hidden" name="import_type" value="bearblog">
+    <input type="submit" value="Import">
+</form>
+<hr>
+
+<br>
+
+{{end}}
