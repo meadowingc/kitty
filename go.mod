@@ -6,7 +6,7 @@ require (
 	github.com/go-chi/chi v1.5.5
 	github.com/go-chi/chi/v5 v5.1.0
 	github.com/go-chi/cors v1.2.1
-	github.com/go-chi/httprate v0.12.1
+	github.com/go-chi/httprate v0.14.0
 	github.com/gosimple/slug v1.14.0
 	golang.org/x/crypto v0.26.0
 	gorm.io/datatypes v1.2.1
