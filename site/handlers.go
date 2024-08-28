@@ -158,7 +158,7 @@ func ImportPosts(w http.ResponseWriter, r *http.Request) {
 
 		// Populate the map with slugs as keys and Post instances as values
 		for _, post := range existingPosts {
-			allCurrentPosts[post.Title] = post
+			allCurrentPosts[post.Slug] = post
 		}
 
 		overwriteExisting := r.FormValue("overwrite_existing") == "on"
@@ -203,10 +203,10 @@ func ImportPosts(w http.ResponseWriter, r *http.Request) {
 			}
 
 			slug := slug.Make(record[4])
-			if _, exists := allCurrentPosts[slug]; exists {
+			if existingPost, exists := allCurrentPosts[slug]; exists {
 				if overwriteExisting {
 					// Delete the existing post
-					result := database.GetDB().Delete(allCurrentPosts[slug])
+					result := database.GetDB().Delete(&existingPost)
 					if result.Error != nil {
 						http.Error(w, "Failed to delete existing post: "+result.Error.Error(), http.StatusInternalServerError)
 						return
@@ -315,7 +315,7 @@ func CreatePost(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func EditPost(w http.ResponseWriter, r *http.Request) {
+func UpdatePost(w http.ResponseWriter, r *http.Request) {
 	postID := chi.URLParam(r, "postID")
 
 	var post database.Post
@@ -348,6 +348,16 @@ func EditPost(w http.ResponseWriter, r *http.Request) {
 		post.Slug = newPostData.Slug
 		if post.Slug == "" {
 			post.Slug = slug.Make(post.Title)
+		}
+
+		existingSlugPost, err := database.GetPostWithSlug(post.Slug)
+		if err != nil {
+			http.Error(w, "Error verifying if posts exists: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		if existingSlugPost != nil && existingSlugPost.ID != post.ID {
+			http.Error(w, "A post with the same slug already exists", http.StatusBadRequest)
+			return
 		}
 
 		post.PublishedDate = newPostData.PublishedDate

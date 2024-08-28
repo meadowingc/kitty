@@ -80,7 +80,7 @@ func initRouter() *chi.Mux {
 		r.HandleFunc("/import", site.ImportPosts)
 
 		r.HandleFunc("/post/new", site.CreatePost)
-		r.HandleFunc("/post/{postID}", site.EditPost)
+		r.HandleFunc("/post/{postID}", site.UpdatePost)
 		r.HandleFunc("/post/{postID}/delete", site.DeletePost)
 	})
 
