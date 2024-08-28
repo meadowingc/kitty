@@ -47,6 +47,18 @@
 {{define "content"}}
 <h1>Post List</h1>
 
+<div>
+    <small>
+        You can get the posts and their markdown contents through API at
+        <br>
+        <a
+            href="/api/v1/get-user-posts-messages/{{.Global.CurrentUser.ID}}"
+            target="_blank">GET /api/v1/get-user-posts-messages/{{.Global.CurrentUser.ID}}</a>
+    </small>
+</div>
+
+<br>
+
 <a href="/u/{{.Global.CurrentUser.ID}}" target="_blank">
     <button>
         See your public profile

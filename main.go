@@ -93,16 +93,16 @@ func initRouter() *chi.Mux {
 	r.Route("/api", func(r chi.Router) {
 		r.Route("/v1", func(r chi.Router) {
 			r.Get("/get-user-posts-messages/{userID}", func(w http.ResponseWriter, r *http.Request) {
-				guestbookID := chi.URLParam(r, "userID")
+				userID := chi.URLParam(r, "userID")
 
 				var posts []database.Post
-				guestbookIDUint, err := strconv.ParseUint(guestbookID, 10, 64)
+				userIDUint, err := strconv.ParseUint(userID, 10, 64)
 				if err != nil {
 					http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 					return
 				}
 
-				result := database.GetDB().Where(&database.Post{AdminUserID: uint(guestbookIDUint)}).
+				result := database.GetDB().Where(&database.Post{AdminUserID: uint(userIDUint)}).
 					Limit(constants.MAX_POSTS_TO_SHOW).
 					Find(&posts)
 				if result.Error != nil {

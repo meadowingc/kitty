@@ -3,6 +3,8 @@ package site
 import (
 	"encoding/csv"
 	"encoding/json"
+	"fmt"
+	"kitty/constants"
 	"kitty/database"
 	"net/http"
 	"strconv"
@@ -236,14 +238,23 @@ func ImportPosts(w http.ResponseWriter, r *http.Request) {
 				lang = record[16]
 			}
 
+			title := record[3]
+			body := record[12]
+			if len(body) > constants.MAX_POST_LENGTH {
+				http.Error(w, fmt.Sprintf(
+					"Failed to import post with title '%s': post body too long. It must be less than '%d' characters, but it is '%d' characters long",
+					title, constants.MAX_POST_LENGTH, len(body)), http.StatusBadRequest)
+				return
+			}
+
 			post := database.Post{
-				Title:           record[3],
+				Title:           title,
 				Slug:            slug,
 				PublishedDate:   publishedDate,
 				Tags:            tags,
 				Published:       record[9] == "TRUE" || record[9] == "true" || record[9] == "True",
 				IsPage:          record[11] == "TRUE" || record[11] == "true" || record[11] == "True",
-				Body:            record[12],
+				Body:            body,
 				MetaDescription: record[14],
 				MetaImage:       record[15],
 				Lang:            lang,

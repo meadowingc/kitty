@@ -6,9 +6,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"kitty/constants"
 	"kitty/database"
 	"log"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -56,6 +58,11 @@ func buildPostFromFormRequest(r *http.Request) (database.Post, error) {
 
 	title := r.FormValue("title")
 	body := r.FormValue("body")
+
+	if len(body) > constants.MAX_POST_LENGTH {
+		return database.Post{}, errors.New("post body too long. It must be less than " + strconv.Itoa(constants.MAX_POST_LENGTH) + " characters")
+	}
+
 	slug := r.FormValue("slug")
 	publishedDate, _ := tryParseDate(r.FormValue("publishedDate"))
 	isPage := r.FormValue("isPage") == "on"
