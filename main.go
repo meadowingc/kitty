@@ -85,6 +85,7 @@ func initRouter() *chi.Mux {
 	})
 
 	r.Get("/post/{postID}", site.PublicViewPost)
+	r.Get("/u/{userID}", site.PublicViewUser)
 
 	fileServer := http.FileServer(http.Dir("./assets"))
 	r.Handle("/assets/*", http.StripPrefix("/assets", fileServer))

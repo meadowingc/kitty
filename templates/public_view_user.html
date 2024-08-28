@@ -1,6 +1,6 @@
 {{template "layout.html" .}}
 
-{{define "title"}}Post List{{end}}
+{{define "title"}}{{.Data.Username}}'s Post List{{end}}
 
 {{define "styles"}}
 <style type="text/css">
@@ -45,47 +45,20 @@
 {{end}}
 
 {{define "content"}}
-<h1>Post List</h1>
+<h1>{{.Data.Username}}'s posts</h1>
 
-<a href="/u/{{.Global.CurrentUser.ID}}" target="_blank">
-    <button>
-        See your public profile
-    </button>
-</a>
-
-<br>
-
-<a href="/dashboard/post/new">
-    <button>
-        New post
-    </button>
-</a>
-
-<br>
-
-<a href="/dashboard/import">
-    <button>
-        Import posts
-    </button>
-</a>
-
-{{if .Data}}
+{{if .Data.Posts}}
 <ul class="post-list">
-    {{range .Data}}
+    {{range .Data.Posts}}
     <li>
         <span>
             <time datetime="{{.PublishedDate | dateFmt " 2006-01-02"}}">
                 {{.PublishedDate | dateFmt "Jan 02, 2006"}}
             </time>
         </span>
-        <a href="/dashboard/post/{{.ID}}">
+        <a href="/post/{{.ID}}">
             {{.Title}}
         </a>
-        {{if not .Published}}
-        <small>
-            (Draft)
-        </small>
-        {{end}}
     </li>
     {{end}}
 </ul>

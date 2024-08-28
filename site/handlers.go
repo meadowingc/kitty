@@ -11,6 +11,7 @@ import (
 	"github.com/gosimple/slug"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/datatypes"
+	"gorm.io/gorm"
 )
 
 func UserSignIn(w http.ResponseWriter, r *http.Request) {
@@ -401,4 +402,19 @@ func PublicViewPost(w http.ResponseWriter, r *http.Request) {
 	}
 
 	RenderTemplate(w, r, "public_view_post", post)
+}
+
+func PublicViewUser(w http.ResponseWriter, r *http.Request) {
+	userID := chi.URLParam(r, "userID")
+
+	var user database.AdminUser
+	result := database.GetDB().Preload("Posts", func(db *gorm.DB) *gorm.DB {
+		return db.Select("id, title, admin_user_id", "published_date").Where("published = ?", true).Order("published_date DESC")
+	}).First(&user, userID)
+	if result.Error != nil {
+		http.Error(w, "User not found", http.StatusNotFound)
+		return
+	}
+
+	RenderTemplate(w, r, "public_view_user", user)
 }
