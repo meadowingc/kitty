@@ -59,7 +59,7 @@ func initRouter() *chi.Mux {
 	r.Use(CORSMiddleware.Handler)
 	r.Use(site.RealIPMiddleware)
 	r.Use(middleware.Logger)
-	r.Use(httprate.LimitByIP(100, time.Minute)) // general rate limiter for all routes (shared across all routes)
+	r.Use(httprate.LimitByIP(50, time.Minute)) // general rate limiter for all routes (shared across all routes)
 	r.Use(middleware.Recoverer)
 	r.Use(site.TryPutUserInContextMiddleware)
 
