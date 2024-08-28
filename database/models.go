@@ -1,4 +1,4 @@
-package main
+package database
 
 import (
 	"time"
@@ -28,16 +28,4 @@ type AdminUser struct {
 	PasswordHash datatypes.JSON `gorm:"type:json"`
 	SessionToken string         `gorm:"index;unique"`
 	Posts        []Post         `gorm:"foreignKey:AdminUserID"`
-}
-
-func getPostWithSlug(slug string) (*Post, error) {
-	var post Post
-	result := db.Where("slug = ?", slug).First(&post)
-	if result.Error != nil {
-		if result.Error == gorm.ErrRecordNotFound {
-			return nil, nil
-		}
-		return nil, result.Error
-	}
-	return &post, nil
 }

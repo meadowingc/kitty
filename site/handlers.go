@@ -1,201 +1,23 @@
-package main
+package site
 
 import (
-	"context"
-	"crypto/rand"
-	"encoding/base64"
 	"encoding/csv"
 	"encoding/json"
-	"errors"
-	"fmt"
-	"html/template"
-	"kitty/constants"
-	"log"
+	"kitty/database"
 	"net/http"
-	"path/filepath"
 	"strconv"
-	"strings"
-	"sync"
-	"time"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/gomarkdown/markdown"
-	"github.com/gomarkdown/markdown/html"
-	"github.com/gomarkdown/markdown/parser"
 	"github.com/gosimple/slug"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/datatypes"
 )
 
-type AdminCookieName string
-
-const AuthenticatedUserCookieName = AdminCookieName("authenticated_user")
-const AuthenticatedUserTokenCookieName = AdminCookieName("authenticated_user_token")
-
-var templatesCache sync.Map
-
-func renderTemplate(w http.ResponseWriter, r *http.Request, templateName string, data any) {
-	type GlobalTemplateData struct {
-		CurrentUser *AdminUser
-		IsDebug     bool
-		SiteName    string
-		PublicURL   string
-	}
-
-	templateData := struct {
-		Global GlobalTemplateData
-		Data   any
-	}{
-		Global: GlobalTemplateData{
-			CurrentUser: getSignedInUserOrNil(r),
-			IsDebug:     constants.DEBUG_MODE,
-			SiteName:    constants.APP_NAME,
-			PublicURL:   constants.PUBLIC_URL,
-		},
-		Data: data,
-	}
-
-	actualTemplate, ok := templatesCache.Load(templateName)
-	if !ok || constants.DEBUG_MODE {
-
-		templatesDir := "templates/"
-
-		baseTemplate := template.New("layout.html").Funcs(template.FuncMap{
-			"jsonListToCommaSeparated": func(jsonList datatypes.JSON) string {
-				var tags []string
-				err := json.Unmarshal(jsonList, &tags)
-				if err != nil {
-					log.Printf("Failed to parse JSON list: %v", err)
-					return ""
-				}
-				for i, tag := range tags {
-					tags[i] = strings.TrimSpace(tag)
-				}
-				return strings.Join(tags, ", ")
-			},
-			"parseMarkdown": func(markdownStr string) template.HTML {
-				extensions := parser.CommonExtensions | parser.AutoHeadingIDs
-				p := parser.NewWithExtensions(extensions)
-				doc := p.Parse([]byte(markdownStr))
-
-				// create HTML renderer with extensions
-				htmlFlags := html.CommonFlags | html.HrefTargetBlank
-				opts := html.RendererOptions{Flags: htmlFlags}
-				renderer := html.NewRenderer(opts)
-
-				rendered := markdown.Render(doc, renderer)
-
-				return template.HTML(rendered)
-			},
-			"dateFmt": func(layout string, t time.Time) string {
-				return t.Format(layout)
-			},
-			"now": func() time.Time {
-				return time.Now()
-			},
-		})
-
-		baseTemplate = template.Must(baseTemplate.ParseFiles(filepath.Join(templatesDir, "layout.html")))
-		actualTemplate = template.Must(baseTemplate.ParseFiles(filepath.Join(templatesDir, templateName+".html")))
-
-		templatesCache.Store(templateName, actualTemplate)
-	}
-
-	err := actualTemplate.(*template.Template).Execute(w, templateData)
-
-	if err != nil {
-		log.Printf("Template execution error: %v", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
-}
-
-func getSignedInUserOrNil(r *http.Request) *AdminUser {
-	adminUser, _ := r.Context().Value(AuthenticatedUserCookieName).(*AdminUser)
-	return adminUser
-}
-
-func getSignedInUserOrFail(r *http.Request) *AdminUser {
-	adminUser := getSignedInUserOrNil(r)
-	if adminUser == nil {
-		log.Fatalf("Expected user to be signed in but it wasn't")
-	}
-
-	return adminUser
-}
-
-func generateAuthToken() (string, error) {
-	const tokenLength = 32
-	tokenBytes := make([]byte, tokenLength)
-	_, err := rand.Read(tokenBytes)
-	if err != nil {
-		return "", err
-	}
-	token := base64.URLEncoding.EncodeToString(tokenBytes)
-	return token, nil
-}
-
-func TryPutUserInContextMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// try to set admin user into context
-		cookie, err := r.Cookie(string(AuthenticatedUserTokenCookieName))
-		if err != nil || cookie.Value == "" {
-			next.ServeHTTP(w, r)
-			return
-		}
-
-		// Validate the token and retrieve the corresponding user
-		var user AdminUser
-		result := db.Where(&AdminUser{SessionToken: cookie.Value}).First(&user)
-		if result.Error != nil {
-			// Clear the invalid cookie
-			http.SetCookie(w, &http.Cookie{
-				Name:   string(AuthenticatedUserTokenCookieName),
-				Value:  "",
-				Path:   "/",
-				MaxAge: -1,
-			})
-			next.ServeHTTP(w, r)
-			return
-		}
-
-		// Store the admin user in the context
-		ctx := context.WithValue(r.Context(), AuthenticatedUserCookieName, &user)
-		next.ServeHTTP(w, r.WithContext(ctx))
-	})
-}
-
-func AuthProtectedMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// if logout then just continue
-		if r.URL.Path == "/logout" {
-			next.ServeHTTP(w, r)
-			return
-		}
-
-		// check context for user
-		adminUser := getSignedInUserOrNil(r)
-		if adminUser == nil {
-			http.Redirect(w, r, "/signin", http.StatusSeeOther)
-			return
-		}
-
-		// try to set admin user into context
-		cookie, err := r.Cookie(string(AuthenticatedUserTokenCookieName))
-		if err != nil || cookie.Value == "" {
-			http.Redirect(w, r, "/signin", http.StatusSeeOther)
-			return
-		}
-
-		// otherwise, continue to the next handler
-		next.ServeHTTP(w, r)
-	})
-}
-
-func userSignIn(w http.ResponseWriter, r *http.Request) {
+func UserSignIn(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "GET" {
 		adminUser := getSignedInUserOrNil(r)
 		if adminUser == nil {
-			renderTemplate(w, r, "signin", nil)
+			RenderTemplate(w, r, "signin", nil)
 			return
 		} else {
 			http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
@@ -206,8 +28,8 @@ func userSignIn(w http.ResponseWriter, r *http.Request) {
 		username := r.FormValue("username")
 		password := r.FormValue("password")
 
-		var admin AdminUser
-		result := db.Where(&AdminUser{Username: username}).First(&admin)
+		var admin database.AdminUser
+		result := database.GetDB().Where(&database.AdminUser{Username: username}).First(&admin)
 		if result.Error != nil {
 			http.Error(w, "Invalid username. You're trying to sign in, but perhaps you still need to sign up?", http.StatusUnauthorized)
 			return
@@ -227,7 +49,7 @@ func userSignIn(w http.ResponseWriter, r *http.Request) {
 		}
 
 		admin.SessionToken = token
-		db.Save(&admin)
+		database.GetDB().Save(&admin)
 
 		http.SetCookie(w, &http.Cookie{
 			Name:  string(AuthenticatedUserTokenCookieName),
@@ -239,11 +61,11 @@ func userSignIn(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func userSignUp(w http.ResponseWriter, r *http.Request) {
+func UserSignUp(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "GET" {
 		adminUser := getSignedInUserOrNil(r)
 		if adminUser == nil {
-			renderTemplate(w, r, "signup", nil)
+			RenderTemplate(w, r, "signup", nil)
 			return
 		} else {
 			http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
@@ -267,9 +89,9 @@ func userSignUp(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		newAdmin := AdminUser{Username: username, PasswordHash: passwordHash, SessionToken: token}
+		newAdmin := database.AdminUser{Username: username, PasswordHash: passwordHash, SessionToken: token}
 
-		result := db.Create(&newAdmin)
+		result := database.GetDB().Create(&newAdmin)
 		if result.Error != nil {
 			http.Error(w, "Error creating account: "+result.Error.Error(), http.StatusInternalServerError)
 			return
@@ -286,7 +108,7 @@ func userSignUp(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func userLogout(w http.ResponseWriter, r *http.Request) {
+func UserLogout(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, &http.Cookie{
 		Name:   string(AuthenticatedUserTokenCookieName),
 		Value:  "",
@@ -296,23 +118,23 @@ func userLogout(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/signin", http.StatusSeeOther)
 }
 
-func userPostList(w http.ResponseWriter, r *http.Request) {
+func UserPostList(w http.ResponseWriter, r *http.Request) {
 	adminUser := getSignedInUserOrFail(r)
 
-	var posts []Post
-	result := db.Where(&Post{AdminUserID: adminUser.ID}).Order("published_date DESC").Find(&posts)
+	var posts []database.Post
+	result := database.GetDB().Where(&database.Post{AdminUserID: adminUser.ID}).Order("published_date DESC").Find(&posts)
 	if result.Error != nil {
 		http.Error(w, "Error fetching posts", http.StatusInternalServerError)
 		return
 	}
 
-	renderTemplate(w, r, "dashboard/list_posts", posts)
+	RenderTemplate(w, r, "dashboard/list_posts", posts)
 }
 
-func importPosts(w http.ResponseWriter, r *http.Request) {
+func ImportPosts(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
-		renderTemplate(w, r, "dashboard/import_posts", nil)
+		RenderTemplate(w, r, "dashboard/import_posts", nil)
 	case "POST":
 		importType := r.FormValue("import_type")
 		if importType != "bearblog" {
@@ -321,11 +143,11 @@ func importPosts(w http.ResponseWriter, r *http.Request) {
 		}
 
 		user := getSignedInUserOrFail(r)
-		allCurrentPosts := make(map[string]Post)
+		allCurrentPosts := make(map[string]database.Post)
 
 		// Retrieve all current posts
-		var existingPosts []Post
-		result := db.Find(&existingPosts)
+		var existingPosts []database.Post
+		result := database.GetDB().Find(&existingPosts)
 		if result.Error != nil {
 			http.Error(w, "Failed to retrieve posts: "+result.Error.Error(), http.StatusInternalServerError)
 			return
@@ -370,7 +192,7 @@ func importPosts(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Convert CSV records to Post structs
-		var incomingPosts []Post
+		var incomingPosts []database.Post
 		for _, record := range records {
 			if len(record) < 2 {
 				http.Error(w, "Invalid CSV format", http.StatusBadRequest)
@@ -381,7 +203,7 @@ func importPosts(w http.ResponseWriter, r *http.Request) {
 			if _, exists := allCurrentPosts[slug]; exists {
 				if overwriteExisting {
 					// Delete the existing post
-					result := db.Delete(allCurrentPosts[slug])
+					result := database.GetDB().Delete(allCurrentPosts[slug])
 					if result.Error != nil {
 						http.Error(w, "Failed to delete existing post: "+result.Error.Error(), http.StatusInternalServerError)
 						return
@@ -413,7 +235,7 @@ func importPosts(w http.ResponseWriter, r *http.Request) {
 				lang = record[16]
 			}
 
-			post := Post{
+			post := database.Post{
 				Title:           record[3],
 				Slug:            slug,
 				PublishedDate:   publishedDate,
@@ -431,7 +253,7 @@ func importPosts(w http.ResponseWriter, r *http.Request) {
 
 		// Insert the posts into the database
 		for _, post := range incomingPosts {
-			result := db.Create(&post)
+			result := database.GetDB().Create(&post)
 			if result.Error != nil {
 				http.Error(w, "Failed to insert post: "+result.Error.Error(), http.StatusInternalServerError)
 				return
@@ -445,77 +267,10 @@ func importPosts(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func tryParseDate(dateStr string) (time.Time, error) {
-	formats := []string{
-		"2006-01-02T15:04",
-		time.RFC3339,
-		time.RFC3339Nano,
-		time.RFC1123,
-		time.RFC1123Z,
-		time.RFC822,
-		time.RFC822Z,
-		time.RFC850,
-		time.ANSIC,
-		time.UnixDate,
-		time.RubyDate,
-		// custom formats
-		"Mon Jan 2 03:04:05 PM MST 2006",
-		"2006-01-02 15:04:05-07:00",
-	}
-
-	for _, layout := range formats {
-		date, err := time.Parse(layout, dateStr)
-		if err == nil {
-			return date, nil
-		}
-	}
-
-	return time.Time{}, fmt.Errorf("unable to parse date: %s", dateStr)
-}
-
-func buildPostFromFormRequest(r *http.Request) (Post, error) {
-	adminUser := getSignedInUserOrNil(r)
-	if adminUser == nil {
-		return Post{}, errors.New("user not signed in")
-	}
-
-	title := r.FormValue("title")
-	body := r.FormValue("body")
-	slug := r.FormValue("slug")
-	publishedDate, _ := tryParseDate(r.FormValue("publishedDate"))
-	isPage := r.FormValue("isPage") == "on"
-	metaDescription := r.FormValue("metaDescription")
-	metaImage := r.FormValue("metaImage")
-	lang := r.FormValue("lang")
-	tags := r.FormValue("tags")
-	published := r.FormValue("published") == "on"
-
-	tagsJSON, err := json.Marshal(strings.Split(tags, ","))
-	if err != nil {
-		return Post{}, errors.New("failed to parse post tags")
-	}
-
-	newPost := Post{
-		AdminUserID:     adminUser.ID,
-		Title:           title,
-		Body:            body,
-		Slug:            slug,
-		PublishedDate:   publishedDate,
-		IsPage:          isPage,
-		MetaDescription: metaDescription,
-		MetaImage:       metaImage,
-		Lang:            lang,
-		Tags:            datatypes.JSON(tagsJSON),
-		Published:       published,
-	}
-
-	return newPost, nil
-}
-
-func createPost(w http.ResponseWriter, r *http.Request) {
+func CreatePost(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
-		renderTemplate(w, r, "dashboard/create_edit_post", nil)
+		RenderTemplate(w, r, "dashboard/create_edit_post", nil)
 	case "POST":
 		newPost, e := buildPostFromFormRequest(r)
 		if e != nil {
@@ -527,7 +282,7 @@ func createPost(w http.ResponseWriter, r *http.Request) {
 			newPost.Slug = slug.Make(newPost.Title)
 		}
 
-		existingSlugPost, err := getPostWithSlug(newPost.Slug)
+		existingSlugPost, err := database.GetPostWithSlug(newPost.Slug)
 		if err != nil {
 			http.Error(w, "Error verifying if posts exists: "+err.Error(), http.StatusInternalServerError)
 			return
@@ -537,7 +292,7 @@ func createPost(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		result := db.Create(&newPost)
+		result := database.GetDB().Create(&newPost)
 		if result.Error != nil {
 			http.Error(w, "Error creating post", http.StatusInternalServerError)
 			return
@@ -548,11 +303,11 @@ func createPost(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func editPost(w http.ResponseWriter, r *http.Request) {
+func EditPost(w http.ResponseWriter, r *http.Request) {
 	postID := chi.URLParam(r, "postID")
 
-	var post Post
-	result := db.First(&post, postID)
+	var post database.Post
+	result := database.GetDB().First(&post, postID)
 	if result.Error != nil {
 		http.Error(w, "Post not found", http.StatusNotFound)
 		return
@@ -566,7 +321,7 @@ func editPost(w http.ResponseWriter, r *http.Request) {
 
 	switch r.Method {
 	case "GET":
-		renderTemplate(w, r, "dashboard/create_edit_post", post)
+		RenderTemplate(w, r, "dashboard/create_edit_post", post)
 
 	case "POST":
 		newPostData, e := buildPostFromFormRequest(r)
@@ -591,7 +346,7 @@ func editPost(w http.ResponseWriter, r *http.Request) {
 		post.Tags = newPostData.Tags
 		post.Published = newPostData.Published
 
-		result = db.Save(&post)
+		result = database.GetDB().Save(&post)
 		if result.Error != nil {
 			http.Error(w, "Error updating guestbook", http.StatusInternalServerError)
 			return
@@ -604,11 +359,11 @@ func editPost(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func deletePost(w http.ResponseWriter, r *http.Request) {
+func DeletePost(w http.ResponseWriter, r *http.Request) {
 	postID := chi.URLParam(r, "postID")
 
-	var post Post
-	result := db.First(&post, postID)
+	var post database.Post
+	result := database.GetDB().First(&post, postID)
 	if result.Error != nil {
 		http.Error(w, "Post not found", http.StatusNotFound)
 		return
@@ -622,7 +377,7 @@ func deletePost(w http.ResponseWriter, r *http.Request) {
 
 	switch r.Method {
 	case "POST":
-		result = db.Delete(&post)
+		result = database.GetDB().Delete(&post)
 		if result.Error != nil {
 			http.Error(w, "Error deleting post", http.StatusInternalServerError)
 			return
@@ -635,15 +390,15 @@ func deletePost(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func publicViewPost(w http.ResponseWriter, r *http.Request) {
+func PublicViewPost(w http.ResponseWriter, r *http.Request) {
 	postID := chi.URLParam(r, "postID")
 
-	var post Post
-	result := db.First(&post, postID)
+	var post database.Post
+	result := database.GetDB().First(&post, postID)
 	if result.Error != nil {
 		http.Error(w, "Post not found", http.StatusNotFound)
 		return
 	}
 
-	renderTemplate(w, r, "public_view_post", post)
+	RenderTemplate(w, r, "public_view_post", post)
 }
