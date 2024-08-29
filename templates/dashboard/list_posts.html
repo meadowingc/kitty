@@ -2,6 +2,8 @@
 
 {{define "title"}}Post List{{end}}
 
+<!-- -------------------------------------------------------------------------------------------------------------------- -->
+
 {{define "styles"}}
 <style type="text/css">
     ul.post-list {
@@ -44,6 +46,8 @@
 </style>
 {{end}}
 
+<!-- -------------------------------------------------------------------------------------------------------------------- -->
+
 {{define "content"}}
 <h1>Post List</h1>
 
@@ -51,12 +55,13 @@
     <small>
         You can get the posts and their markdown contents through API at
         <br>
-        <a
-            href="/api/v1/get-user-posts-messages/{{.Global.CurrentUser.ID}}"
-            target="_blank">GET /api/v1/get-user-posts-messages/{{.Global.CurrentUser.ID}}</a>
+        <a href="/api/v1/get-user-posts-messages/{{.Global.CurrentUser.ID}}" target="_blank">GET
+            /api/v1/get-user-posts-messages/{{.Global.CurrentUser.ID}}</a>
     </small>
 </div>
+<button id="downloadPostsBtn">Export Posts as JSON file</button>
 
+<br>
 <br>
 
 <a href="/u/{{.Global.CurrentUser.ID}}" target="_blank">
@@ -104,4 +109,30 @@
 {{else}}
 <p style="text-align: center;">No posts found.</p>
 {{end}}
+{{end}}
+
+<!-- -------------------------------------------------------------------------------------------------------------------- -->
+
+{{define "scripts"}}
+<script>
+    document.getElementById('downloadPostsBtn').addEventListener('click', function () {
+        const userId = "{{.Global.CurrentUser.ID}}";
+        const url = `/api/v1/get-user-posts-messages/${userId}`;
+
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `kitty_user_posts_${userId}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            })
+            .catch(error => console.error('Error fetching posts:', error));
+    });
+</script>
 {{end}}
