@@ -2,6 +2,8 @@
 
 {{define "title"}}Manage Post{{end}}
 
+<!-- -------------------------------------------------------------------------------------------------------------------- -->
+
 {{define "styles"}}
 <style>
     .form-group {
@@ -92,9 +94,11 @@
 </style>
 {{end}}
 
-{{define "content"}}
+<!-- -------------------------------------------------------------------------------------------------------------------- -->
 
+{{define "content"}}
 {{$isEditing := (and .Data (or .Data.ID false))}}
+
 <h1>{{if $isEditing}}Edit{{else}}New{{end}} Post</h1>
 <div>
     {{ $formActionUrl := "/dashboard/post/new" }} <!-- Default URL -->
@@ -109,7 +113,7 @@
     </form>
     {{ end }}
 
-    <form action="{{ $formActionUrl }}" method="post">
+    <form id="postEditForm" action="{{ $formActionUrl }}" method="post">
         <div class="action-buttons">
             <input type="submit" value="{{if $isEditing}}Update{{else}}Create{{end}} Post">
             {{ if $isEditing }}
@@ -179,4 +183,19 @@
         <br>
     </form>
 </div>
+{{end}}
+
+<!-- -------------------------------------------------------------------------------------------------------------------- -->
+
+{{define "scripts"}}
+<script>
+    window.addEventListener('load', function () {
+        document.addEventListener('keydown', function (e) {
+            if (e.ctrlKey && e.key === 's') {
+                e.preventDefault();
+                document.querySelector('form#postEditForm').submit();
+            }
+        });
+    });
+</script>
 {{end}}
