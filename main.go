@@ -70,9 +70,9 @@ func initRouter() *chi.Mux {
 	r.Get("/terms-and-conditions", func(w http.ResponseWriter, r *http.Request) {
 		site.RenderTemplate(w, r, "terms_and_conditions", nil)
 	})
-	r.HandleFunc("/signinsite.", site.UserSignIn)
-	r.HandleFunc("/signupsite.", site.UserSignUp)
-	r.Post("/logoutsite.", site.UserLogout)
+	r.HandleFunc("/signin", site.UserSignIn)
+	r.HandleFunc("/signup", site.UserSignUp)
+	r.Post("/logout", site.UserLogout)
 
 	r.With(site.AuthProtectedMiddleware).Route("/dashboard", func(r chi.Router) {
 		r.Get("/", site.UserPostList)
