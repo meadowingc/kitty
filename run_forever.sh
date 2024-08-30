@@ -3,6 +3,7 @@
 # run forever, even if we fail
 while true; do
     git pull
-    go run -tags release .
+    go build -tags release .
+    ./kitty
     sleep 1
 done
