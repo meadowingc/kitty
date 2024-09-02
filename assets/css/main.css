@@ -13,7 +13,7 @@ html {
   --background-color: #f5f5f5;
   --heading-color: #333;
   --text-color: #444;
-  --link-color: #007acc;
+  --link-color: #ff4081;
   --visited-color: #551a8b;
   --code-background-color: #eaeaea;
   --code-color: #2d2d2d;
@@ -27,7 +27,7 @@ html {
     --background-color: #1e1e1e;
     --heading-color: #e4e4e4;
     --text-color: #d4d4d4;
-    --link-color: #569cd6;
+    --link-color: #ff80ab;
     --visited-color: #9a67ea;
     --code-background-color: #2d2d2d;
     --code-color: #dcdcdc;
@@ -89,11 +89,6 @@ b {
 button {
   margin: 0;
   cursor: pointer;
-}
-
-button:hover {
-  background-color: lighten(var(--link-color), 20%);
-  color: #fff;
 }
 
 header {
