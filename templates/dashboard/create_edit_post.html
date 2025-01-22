@@ -184,13 +184,16 @@
         </div>
         <br>
         <div class="form-group textarea-group">
-            <div style="display:block;"><label for="body">Body:</label></div>
+            <div style="display:block;"><label for="body">Body (note that auto-save is enabled):</label></div>
             <textarea name="body" id="body" style="min-height: 500px;border-top: 1px solid lightgrey;"
                 placeholder="...">{{if $isEditing}}{{.Data.Body}}{{end}}</textarea>
         </div>
         <br>
         <br>
     </form>
+    <div id="saveMessage" style="display:none; background-color: #4CAF50; color: white; padding: 10px; border-radius: 5px;">
+        Post saved!
+    </div>
 </div>
 {{end}}
 
@@ -199,10 +202,46 @@
 {{define "scripts"}}
 <script>
     window.addEventListener('load', function () {
+        let saveTimeout;
+
+        function triggerSave() {
+            const form = document.querySelector('form#postEditForm');
+            const formData = new FormData(form);
+
+            fetch(form.action, {
+                method: 'POST',
+                body: formData,
+            })
+            .then(response => {
+                if (response.ok) {
+                    showSaveMessage();
+                } else {
+                    console.error('Save failed:', response.statusText);
+                }
+            })
+            .catch(error => {
+                console.error('Save error:', error);
+            });
+        }
+
+        function showSaveMessage() {
+            const message = document.getElementById('saveMessage');
+            message.style.display = 'block';
+            message.style.opacity = 1;
+            setTimeout(() => {
+                message.style.transition = 'opacity 2s';
+                message.style.opacity = 0;
+            }, 2_000);
+        }
+
         document.addEventListener('keydown', function (e) {
             if (e.ctrlKey && e.key === 's') {
                 e.preventDefault();
-                document.querySelector('form#postEditForm').submit();
+                triggerSave();
+            } else {
+                // save after 10 seconds of inactivity
+                clearTimeout(saveTimeout);
+                saveTimeout = setTimeout(triggerSave, 2_000);
             }
         });
     });
