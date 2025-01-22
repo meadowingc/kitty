@@ -49,24 +49,16 @@
 <!-- -------------------------------------------------------------------------------------------------------------------- -->
 
 {{define "content"}}
+
+{{if .Data.IsPage }}
+<h1>Page List</h1>
+{{else}}
 <h1>Post List</h1>
+{{end}}
 
-<div>
-    <small>
-        You can get the posts and their markdown contents through API at
-        <br>
-        <a href="/api/v1/get-user-posts-messages/{{.Global.CurrentUser.ID}}" target="_blank">GET
-            /api/v1/get-user-posts-messages/{{.Global.CurrentUser.ID}}</a>
-    </small>
-</div>
-<button id="downloadPostsBtn">Export Posts as JSON file</button>
-
-<br>
-<br>
-
-<a href="/u/{{.Global.CurrentUser.ID}}" target="_blank">
+<a href="/dashboard">
     <button>
-        See your public profile
+        Back to dashboard
     </button>
 </a>
 
@@ -74,21 +66,35 @@
 
 <a href="/dashboard/post/new">
     <button>
-        New post
+        {{if .Data.IsPage }}
+        New Page
+        {{else}}
+        New Post
+        {{end}}
     </button>
 </a>
 
 <br>
 
-<a href="/dashboard/import">
+{{if .Data.IsPage }}
+<a href="/dashboard/list-posts">
     <button>
-        Import posts
+        Go to Post List
     </button>
 </a>
+{{else}}
+<a href="/dashboard/list-pages">
+    <button>
+        Go to Page List
+    </button>
+</a>
+{{end}}
+
+<br>
 
 {{if .Data}}
 <ul class="post-list">
-    {{range .Data}}
+    {{range .Data.Posts}}
     <li>
         <span>
             <time datetime="{{.PublishedDate | dateFmt " 2006-01-02"}}">
@@ -109,30 +115,4 @@
 {{else}}
 <p style="text-align: center;">No posts found.</p>
 {{end}}
-{{end}}
-
-<!-- -------------------------------------------------------------------------------------------------------------------- -->
-
-{{define "scripts"}}
-<script>
-    document.getElementById('downloadPostsBtn').addEventListener('click', function () {
-        const userId = "{{.Global.CurrentUser.ID}}";
-        const url = `/api/v1/get-user-posts-messages/${userId}`;
-
-        fetch(url)
-            .then(response => response.json())
-            .then(data => {
-                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `kitty_user_posts_${userId}.json`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-            })
-            .catch(error => console.error('Error fetching posts:', error));
-    });
-</script>
 {{end}}

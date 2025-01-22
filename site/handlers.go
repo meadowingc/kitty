@@ -121,17 +121,69 @@ func UserLogout(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/signin", http.StatusSeeOther)
 }
 
+func UserDashboardHome(w http.ResponseWriter, r *http.Request) {
+	_ = getSignedInUserOrFail(r)
+	RenderTemplate(w, r, "dashboard/dashboard", nil)
+}
+
 func UserPostList(w http.ResponseWriter, r *http.Request) {
 	adminUser := getSignedInUserOrFail(r)
 
 	var posts []database.Post
-	result := database.GetDB().Where(&database.Post{AdminUserID: adminUser.ID}).Order("published_date DESC").Find(&posts)
+	result := database.GetDB().Where(&database.Post{
+		AdminUserID: adminUser.ID,
+	}).Order("published_date DESC").Find(&posts)
 	if result.Error != nil {
 		http.Error(w, "Error fetching posts", http.StatusInternalServerError)
 		return
 	}
 
-	RenderTemplate(w, r, "dashboard/list_posts", posts)
+	filteredPosts := make([]database.Post, 0)
+	for _, post := range posts {
+		if !post.IsPage {
+			filteredPosts = append(filteredPosts, post)
+		}
+	}
+
+	var data = struct {
+		Posts  []database.Post
+		IsPage bool
+	}{
+		Posts:  filteredPosts,
+		IsPage: false,
+	}
+
+	RenderTemplate(w, r, "dashboard/list_posts_and_pages", data)
+}
+
+func UserPageList(w http.ResponseWriter, r *http.Request) {
+	adminUser := getSignedInUserOrFail(r)
+
+	var pages []database.Post
+	result := database.GetDB().Where(&database.Post{
+		AdminUserID: adminUser.ID,
+	}).Order("published_date DESC").Find(&pages)
+	if result.Error != nil {
+		http.Error(w, "Error fetching pages", http.StatusInternalServerError)
+		return
+	}
+
+	filteredPages := make([]database.Post, 0)
+	for _, page := range pages {
+		if page.IsPage {
+			filteredPages = append(filteredPages, page)
+		}
+	}
+
+	var data = struct {
+		Posts  []database.Post
+		IsPage bool
+	}{
+		Posts:  filteredPages,
+		IsPage: true,
+	}
+
+	RenderTemplate(w, r, "dashboard/list_posts_and_pages", data)
 }
 
 func ImportPosts(w http.ResponseWriter, r *http.Request) {

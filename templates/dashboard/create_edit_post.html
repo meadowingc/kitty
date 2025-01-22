@@ -47,8 +47,12 @@
         border-radius: 5px;
     }
 
+    .form-group.textarea-group {
+        display: flex;
+        flex-direction: column;
+    }
+
     textarea[name="body"] {
-        width: 100%;
         height: 20em;
         resize: vertical;
     }
@@ -73,6 +77,11 @@
     }
 
     @media (max-width: 600px) {
+        body {
+           padding: 1em;
+           width: 100%;
+        }
+
         .form-group {
             flex-direction: column;
         }
@@ -83,7 +92,7 @@
 
         .form-group input,
         .form-group textarea {
-            width: 100%;
+            max-width: 100%; 
         }
 
         .form-group input[type="checkbox"] {
@@ -174,8 +183,8 @@
             <input type="checkbox" id="isPage" name="isPage" {{if and $isEditing .Data.IsPage}}checked{{end}}>
         </div>
         <br>
-        <div>
-            <label for="body">Body:</label>
+        <div class="form-group textarea-group">
+            <div style="display:block;"><label for="body">Body:</label></div>
             <textarea name="body" id="body" style="min-height: 500px;border-top: 1px solid lightgrey;"
                 placeholder="...">{{if $isEditing}}{{.Data.Body}}{{end}}</textarea>
         </div>

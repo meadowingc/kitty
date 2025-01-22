@@ -75,7 +75,9 @@ func initRouter() *chi.Mux {
 	r.Post("/logout", site.UserLogout)
 
 	r.With(site.AuthProtectedMiddleware).Route("/dashboard", func(r chi.Router) {
-		r.Get("/", site.UserPostList)
+		r.Get("/", site.UserDashboardHome)
+		r.Get("/list-posts", site.UserPostList)
+		r.Get("/list-pages", site.UserPageList)
 
 		r.HandleFunc("/import", site.ImportPosts)
 
