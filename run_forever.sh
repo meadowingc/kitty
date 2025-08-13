@@ -3,7 +3,7 @@
 # run forever, even if we fail
 while true; do
     git pull
-    ./tailwindcss -i assets/css/tailwind.css -o assets/css/main.css --minify
+    task tailwind-build
     go build -tags release -o kitty
     ./kitty
     sleep 1
