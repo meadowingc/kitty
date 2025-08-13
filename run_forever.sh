@@ -3,7 +3,6 @@
 # run forever, even if we fail
 while true; do
     git pull
-    task tailwind-build
     go build -tags release -o kitty
     ./kitty
     sleep 1

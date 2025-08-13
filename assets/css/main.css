@@ -20,6 +20,26 @@ html {
   --blockquote-color: #666;
   --em-color: #444c4c;
   --box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  /* Cozy color palette */
+  --cozy-cream: #faf8f3;
+  --cozy-warmwhite: #f9f7f2;
+  --cozy-beige: #f0ede6;
+  --cozy-sand: #e8e3d8;
+  --cozy-brown-50: #f9f7f4;
+  --cozy-brown-100: #f0ede6;
+  --cozy-brown-200: #e1d9cc;
+  --cozy-brown-300: #cfc0a8;
+  --cozy-brown-400: #b8a382;
+  --cozy-brown-500: #a08966;
+  --cozy-brown-600: #8b7355;
+  --cozy-brown-700: #725d47;
+  --cozy-brown-800: #5d4b3c;
+  --cozy-brown-900: #4a3d32;
+  --cozy-orange-400: #f19638;
+  --cozy-orange-500: #ed7614;
+  --cozy-orange-600: #de5c0a;
+  --cozy-green-500: #369b5a;
+  --cozy-green-600: #277d46;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -36,39 +56,48 @@ html {
   }
 }
 
-body {
-  font-family: var(--font-secondary);
-  font-size: var(--font-scale);
-  margin: auto;
-  padding: 20px;
-  max-width: var(--width);
-  text-align: left;
-  background-color: var(--background-color);
-  word-wrap: break-word;
-  overflow-wrap: break-word;
-  line-height: 1.5;
-  color: var(--text-color);
+/* --- Base Styles --- */
+html {
+  scroll-behavior: smooth;
 }
 
-h1,
-h2,
-h3,
-h4,
-h5,
-h6 {
-  font-family: var(--font-main);
-  color: var(--heading-color);
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  line-height: 1.6;
+  background-color: var(--cozy-cream);
+  color: var(--cozy-brown-800);
+  margin: 0 auto;
+  padding: 1.25rem;
+  max-width: 960px;
+  text-align: left;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
+
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: Georgia, serif;
+  color: var(--cozy-brown-900);
+  line-height: 1.3;
+}
+
+/* Dark mode */
+@media (prefers-color-scheme: dark) {
+  body {
+    background-color: var(--cozy-brown-900);
+    color: var(--cozy-brown-100);
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    color: var(--cozy-brown-50);
+  }
+}
+
 
 a {
   color: var(--link-color);
   cursor: pointer;
   text-decoration: underline;
-}
-
-a:hover {
-  text-decoration: wavy underline;
-  color: darken(var(--link-color), 10%);
 }
 
 nav a {
@@ -77,8 +106,8 @@ nav a {
 
 .nav-right {
   display: flex;
-  justify-content: flex-end;
   align-items: center;
+  gap: 1rem;
 }
 
 strong,
@@ -92,8 +121,12 @@ button {
 }
 
 header {
-  padding-bottom: 1em;
-  border-bottom: 1px dotted var(--heading-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 1.5rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 2px dotted var(--cozy-brown-300);
 }
 
 main {
@@ -159,6 +192,7 @@ footer {
 }
 
 .title {
+  color: var(--cozy-brown-900);
   text-decoration: none;
 }
 
@@ -168,71 +202,177 @@ footer {
 
 .title h1 {
   font-size: 1.5em;
+  margin: 0;
 }
 
-.inline {
-  width: auto !important;
-}
 
-.highlight,
-.code {
-  padding: 1px 15px;
-  background-color: var(--code-background-color);
-  color: var(--code-color);
-  border-radius: 3px;
-  margin-block-start: 1em;
-  margin-block-end: 1em;
-  overflow-x: auto;
-}
-
-ul.blog-posts {
-  list-style-type: none;
-  padding: unset;
-}
-
-ul.blog-posts li {
-  display: flex;
+/* --- Cozy Styles from tailwind.css --- */
+/* Cozy Buttons */
+.btn-cozy {
+  display: inline-flex;
   align-items: center;
-  padding: 10px 0;
-  border-bottom: 1px solid var(--text-color);
-}
-
-ul.blog-posts li span {
-  flex: 0 0 130px;
-  font-weight: bold;
-}
-
-ul.blog-posts li a:visited {
-  color: var(--visited-color);
-}
-
-.upvote-count {
-  display: none;
-}
-
-button.upvote-button {
-  cursor: pointer;
-}
-
-button.upvote-button:hover {
-  background-color: lighten(var(--link-color), 20%);
-  color: #fff;
-}
-
-.sr-only {
-  display: none;
-}
-
-.button-link {
-  background: none;
+  padding: 0.75rem 1.5rem;
+  font-weight: 500;
+  border-radius: 0.75rem;
+  transition: all 0.2s ease;
+  background-color: var(--cozy-orange-500);
+  color: white;
   border: none;
-  color: var(--link-color);
-  text-decoration: underline;
   cursor: pointer;
-  font: inherit;
+  text-decoration: none;
+  box-shadow: 0 2px 8px -2px rgba(0, 0, 0, 0.1), 0 1px 4px -1px rgba(0, 0, 0, 0.06);
+}
+.btn-cozy:hover {
+  background-color: var(--cozy-orange-600);
+  box-shadow: 0 4px 16px -4px rgba(0, 0, 0, 0.1), 0 2px 8px -2px rgba(0, 0, 0, 0.06);
+  transform: translateY(-1px);
+}
+.btn-cozy-secondary {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.75rem 1.5rem;
+  font-weight: 500;
+  border-radius: 0.75rem;
+  transition: all 0.2s ease;
+  background-color: var(--cozy-brown-100);
+  color: var(--cozy-brown-800);
+  border: 1px solid var(--cozy-brown-300);
+  cursor: pointer;
+  text-decoration: none;
+  box-shadow: 0 2px 8px -2px rgba(0, 0, 0, 0.1), 0 1px 4px -1px rgba(0, 0, 0, 0.06);
+}
+.btn-cozy-secondary:hover {
+  background-color: var(--cozy-brown-200);
+  box-shadow: 0 4px 16px -4px rgba(0, 0, 0, 0.1), 0 2px 8px -2px rgba(0, 0, 0, 0.06);
+}
+.btn-cozy-ghost {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  font-weight: 500;
+  border-radius: 0.75rem;
+  transition: all 0.2s ease;
+  color: var(--cozy-brown-700);
+  background-color: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+  text-decoration: none;
+}
+.btn-cozy-ghost:hover {
+  background-color: var(--cozy-brown-100);
+  border-color: var(--cozy-brown-200);
 }
 
-.button-link:hover {
-  text-decoration: wavy underline;
-  color: darken(var(--link-color), 10%);
+/* Cozy Form Elements */
+.input-cozy {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--cozy-brown-200);
+  background-color: var(--cozy-warmwhite);
+  color: var(--cozy-brown-800);
+  transition: all 0.2s ease;
+  font-size: 1rem;
+  line-height: 1.5;
+}
+.input-cozy:focus {
+  outline: none;
+  border-color: var(--cozy-orange-400);
+  box-shadow: 0 0 0 3px rgba(237, 118, 20, 0.1);
+}
+.textarea-cozy {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--cozy-brown-200);
+  background-color: var(--cozy-warmwhite);
+  color: var(--cozy-brown-800);
+  transition: all 0.2s ease;
+  font-size: 1rem;
+  line-height: 1.5;
+  resize: vertical;
+  min-height: 6rem;
+  font-family: inherit;
+}
+.textarea-cozy:focus {
+  outline: none;
+  border-color: var(--cozy-orange-400);
+  box-shadow: 0 0 0 3px rgba(237, 118, 20, 0.1);
+}
+
+/* Cozy Card */
+.card-cozy {
+  padding: 1.5rem;
+  border-radius: 1rem;
+  border: 1px solid var(--cozy-brown-100);
+  background-color: var(--cozy-warmwhite);
+  box-shadow: 0 2px 8px -2px rgba(0, 0, 0, 0.1), 0 1px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+/* Cozy Navigation Link */
+.nav-link-cozy {
+  font-weight: 500;
+  color: var(--cozy-brown-700);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+.nav-link-cozy:hover {
+  color: var(--cozy-orange-600);
+}
+
+/* Cozy Utility Classes */
+.grid {
+  display: grid;
+}
+.gap-6 {
+  gap: 1.5rem;
+}
+.mb-8 {
+  margin-bottom: 2rem;
+}
+.mb-6 {
+  margin-bottom: 1.5rem;
+}
+.text-sm {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
+@media (min-width: 768px) {
+  .md\:grid-cols-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Cozy Dark Mode Overrides */
+@media (prefers-color-scheme: dark) {
+  .btn-cozy-secondary {
+    background-color: var(--cozy-brown-800);
+    color: var(--cozy-brown-100);
+    border-color: var(--cozy-brown-600);
+  }
+  .btn-cozy-secondary:hover {
+    background-color: var(--cozy-brown-700);
+  }
+  .btn-cozy-ghost {
+    color: var(--cozy-brown-200);
+  }
+  .btn-cozy-ghost:hover {
+    background-color: var(--cozy-brown-800);
+    border-color: var(--cozy-brown-600);
+  }
+  .input-cozy, .textarea-cozy {
+    background-color: var(--cozy-brown-800);
+    border-color: var(--cozy-brown-600);
+    color: var(--cozy-brown-100);
+  }
+  .card-cozy {
+    background-color: var(--cozy-brown-800);
+    border-color: var(--cozy-brown-700);
+  }
+  .nav-link-cozy {
+    color: var(--cozy-brown-200);
+  }
+  .nav-link-cozy:hover {
+    color: var(--cozy-orange-400);
+  }
 }

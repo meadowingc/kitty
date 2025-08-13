@@ -78,8 +78,12 @@
 
     @media (max-width: 600px) {
         body {
-           padding: 1em;
+           padding: 0em;
            width: 100%;
+        }
+        
+        main{
+            padding:0.5em;
         }
 
         .form-group {
@@ -144,6 +148,7 @@
             <label for="slug">Slug:</label>
             <input type="text" id="slug" name="slug" {{if $isEditing}}value="{{.Data.Slug}}" {{end}}
                 placeholder="If not provided, the title will be slugified">
+            <div id="slugError" style="color: red; font-size: 0.9em; display: none;"></div>
         </div>
         <div class="form-group">
             <label for="publishedDate">Published Date:</label>
@@ -208,6 +213,10 @@
             const form = document.querySelector('form#postEditForm');
             const formData = new FormData(form);
 
+            // Clear any previous slug error message
+            const slugError = document.getElementById('slugError');
+            slugError.style.display = 'none';
+
             fetch(form.action, {
                 method: 'POST',
                 body: formData,
@@ -216,7 +225,16 @@
                 if (response.ok) {
                     showSaveMessage();
                 } else {
-                    console.error('Save failed:', response.statusText);
+                    response.text().then(errorMessage => {
+                        console.error('Save failed:', errorMessage);
+                        if (errorMessage.includes('slug already exists')) {
+                            const slugError = document.getElementById('slugError');
+                            slugError.textContent = 'This slug is already in use. Please choose a different one.';
+                            slugError.style.display = 'block';
+                        } else {
+                            alert('Error saving post: ' + errorMessage);
+                        }
+                    });
                 }
             })
             .catch(error => {
