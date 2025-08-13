@@ -17,26 +17,25 @@
     <header>
         <a class="title" href="/">
             <h1>
-                😺 {{.Global.SiteName}} </h1>
+                <span style="font-size: 1.2em;">😺</span> {{.Global.SiteName}}
+            </h1>
         </a>
         <nav class="nav-right">
             {{if .Global.CurrentUser}}
-            <a href="/dashboard">Dashboard</a> |
+            <a href="/dashboard" class="nav-link-cozy">Dashboard</a>
             <form action="/logout" method="post" style="display: inline;">
-                <input type="submit" value="Logout" class="button-link">
+                <button type="submit" class="btn-cozy-ghost">Logout</button>
             </form>
             {{else}}
-            <a href="/signin">Sign In</a>
-            <a href="/signup">Sign Up</a>
+            <a href="/signin" class="btn-cozy-ghost">Sign In</a>
+            <a href="/signup" class="btn-cozy-ghost">Sign Up</a>
             {{end}}
         </nav>
     </header>
 
-    <div class="container" style="margin-top: 1.5em;">
-        <main>
-            {{template "content" .}}
-        </main>
-    </div>
+    <main class="mb-8">
+        {{template "content" .}}
+    </main>
 
     <footer style="padding:25px 0;">
         <span id="footer-directive">

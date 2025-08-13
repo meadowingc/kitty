@@ -5,3 +5,7 @@ tmp/
 *.db*
 
 kitty
+
+tailwindcss
+
+assets/css/main.css

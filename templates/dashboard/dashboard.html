@@ -2,110 +2,24 @@
 
 {{define "title"}}Dashboard{{end}}
 
-<!-- -------------------------------------------------------------------------------------------------------------------- -->
-
-{{define "styles"}}
-<style type="text/css">
-    ul.post-list {
-        list-style-type: none;
-        padding: unset;
-    }
-
-    ul.post-list li {
-        display: flex;
-        align-items: baseline;
-        padding: 10px 0;
-        border-bottom: 1px solid #eceff4;
-    }
-
-    ul.post-list li span {
-        flex: 0 0 130px;
-    }
-
-    ul.post-list li span.number {
-        flex: 0 0 50px;
-    }
-
-    ul.post-list li a {
-        flex: max-content;
-    }
-
-    ul.post-list li small {
-        text-align: right;
-        flex: 0 0 115px;
-    }
-
-    ul.blog-posts li a:visited {
-        color: var(--visited-color);
-    }
-
-    time {
-        font-family: monospace;
-        font-size: 15px;
-    }
-</style>
-{{end}}
-
-<!-- -------------------------------------------------------------------------------------------------------------------- -->
-
 {{define "content"}}
-<h1>Dashboard</h1>
+<h1 class="mb-6">Dashboard</h1>
 
-<div>
-    <small>
-        You can get the posts and their markdown contents through API at
-        <br>
-        <a href="/api/v1/get-user-posts-messages/{{.Global.CurrentUser.ID}}" target="_blank">GET
-            /api/v1/get-user-posts-messages/{{.Global.CurrentUser.ID}}</a>
-    </small>
+<div class="text-sm mb-4">
+    <p>
+        Access your posts and markdown contents via API:
+        <a href="/api/v1/get-user-posts-messages/{{.Global.CurrentUser.ID}}" target="_blank" class="text-cozy-orange-600 underline">GET /api/v1/get-user-posts-messages/{{.Global.CurrentUser.ID}}</a>
+    </p>
 </div>
-<button id="downloadPostsBtn">Export Posts as JSON file</button>
 
-<br>
-<br>
-
-<a href="/u/{{ pathEscape .Global.CurrentUser.Username }}" target="_blank">
-    <button>
-        See your public profile
-    </button>
-</a>
-
-<br>
-
-<a href="/dashboard/post/new">
-    <button>
-        New post
-    </button>
-</a>
-
-<br>
-
-<a href="/dashboard/import">
-    <button>
-        Import posts
-    </button>
-</a>
-
-<br>
-<br>
-
-<a href="/dashboard/list-posts">
-    <button>
-        See all posts
-    </button>
-</a>
-
-<br>
-
-<a href="/dashboard/list-pages">
-    <button>
-        See all pages
-    </button>
-</a>
-
-{{end}} <!-- content -->
-
-<!-- -------------------------------------------------------------------------------------------------------------------- -->
+<ul class="list-none space-y-2 mb-6">
+    <li><a href="/u/{{ pathEscape .Global.CurrentUser.Username }}" target="_blank" class="text-cozy-orange-600 underline">See your public profile</a></li>
+    <li><a href="/dashboard/post/new" class="text-cozy-orange-600 underline">New post</a></li>
+    <li><a href="/dashboard/import" class="text-cozy-orange-600 underline">Import posts</a></li>
+    <li><a href="/dashboard/list-posts" class="text-cozy-orange-600 underline">See all posts</a></li>
+    <li><a href="/dashboard/list-pages" class="text-cozy-orange-600 underline">See all pages</a></li>
+</ul>
+{{end}}
 
 {{define "scripts"}}
 <script>
@@ -129,4 +43,4 @@
             .catch(error => console.error('Error fetching posts:', error));
     });
 </script>
-{{end}} <!-- scripts -->
+{{end}}
