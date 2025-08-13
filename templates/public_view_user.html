@@ -56,7 +56,7 @@
                 {{.PublishedDate | dateFmt "Jan 02, 2006"}}
             </time>
         </span>
-        <a href="/post/{{.ID}}">
+        <a href="/u/{{ pathEscape $.Data.Username }}/{{ pathEscape .Slug }}">
             {{.Title}}
         </a>
     </li>

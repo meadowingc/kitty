@@ -9,10 +9,10 @@ import (
 
 type Post struct {
 	gorm.Model
-	AdminUserID     uint `gorm:"index"`
+	AdminUserID     uint `gorm:"uniqueIndex:idx_user_slug"`
 	Title           string
 	Body            string `gorm:"type:text"`
-	Slug            string
+	Slug            string `gorm:"uniqueIndex:idx_user_slug"`
 	PublishedDate   time.Time
 	IsPage          bool
 	MetaDescription string

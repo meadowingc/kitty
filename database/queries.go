@@ -13,3 +13,15 @@ func GetPostWithSlug(slug string) (*Post, error) {
 	}
 	return &post, nil
 }
+
+func GetPostWithSlugForUser(userID uint, slug string) (*Post, error) {
+	var post Post
+	result := db.Where("slug = ? AND admin_user_id = ?", slug, userID).First(&post)
+	if result.Error != nil {
+		if result.Error == gorm.ErrRecordNotFound {
+			return nil, nil
+		}
+		return nil, result.Error
+	}
+	return &post, nil
+}

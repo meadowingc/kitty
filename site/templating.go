@@ -7,6 +7,7 @@ import (
 	"kitty/database"
 	"log"
 	"net/http"
+	"net/url"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -78,6 +79,9 @@ func RenderTemplate(w http.ResponseWriter, r *http.Request, templateName string,
 			},
 			"now": func() time.Time {
 				return time.Now()
+			},
+			"pathEscape": func(s string) string {
+				return url.PathEscape(s)
 			},
 		})
 

@@ -7,6 +7,7 @@ import (
 	"kitty/constants"
 	"kitty/database"
 	"net/http"
+	"net/url"
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
@@ -202,7 +203,7 @@ func ImportPosts(w http.ResponseWriter, r *http.Request) {
 
 		// Retrieve all current posts
 		var existingPosts []database.Post
-		result := database.GetDB().Find(&existingPosts)
+		result := database.GetDB().Where(&database.Post{AdminUserID: user.ID}).Find(&existingPosts)
 		if result.Error != nil {
 			http.Error(w, "Failed to retrieve posts: "+result.Error.Error(), http.StatusInternalServerError)
 			return
@@ -346,7 +347,7 @@ func CreatePost(w http.ResponseWriter, r *http.Request) {
 			newPost.Slug = slug.Make(newPost.Title)
 		}
 
-		existingSlugPost, err := database.GetPostWithSlug(newPost.Slug)
+		existingSlugPost, err := database.GetPostWithSlugForUser(newPost.AdminUserID, newPost.Slug)
 		if err != nil {
 			http.Error(w, "Error verifying if posts exists: "+err.Error(), http.StatusInternalServerError)
 			return
@@ -402,7 +403,7 @@ func UpdatePost(w http.ResponseWriter, r *http.Request) {
 			post.Slug = slug.Make(post.Title)
 		}
 
-		existingSlugPost, err := database.GetPostWithSlug(post.Slug)
+		existingSlugPost, err := database.GetPostWithSlugForUser(currentUser.ID, post.Slug)
 		if err != nil {
 			http.Error(w, "Error verifying if posts exists: "+err.Error(), http.StatusInternalServerError)
 			return
@@ -474,16 +475,61 @@ func PublicViewPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	RenderTemplate(w, r, "public_view_post", post)
+	var user database.AdminUser
+	if err := database.GetDB().First(&user, post.AdminUserID).Error; err != nil {
+		http.Error(w, "User not found", http.StatusNotFound)
+		return
+	}
+
+	http.Redirect(w, r, "/u/"+url.PathEscape(user.Username)+"/"+url.PathEscape(post.Slug), http.StatusMovedPermanently)
 }
 
 func PublicViewUser(w http.ResponseWriter, r *http.Request) {
 	userID := chi.URLParam(r, "userID")
 
 	var user database.AdminUser
+	if err := database.GetDB().First(&user, userID).Error; err != nil {
+		http.Error(w, "User not found", http.StatusNotFound)
+		return
+	}
+
+	http.Redirect(w, r, "/u/"+url.PathEscape(user.Username), http.StatusMovedPermanently)
+}
+
+func PublicViewPostBySlug(w http.ResponseWriter, r *http.Request) {
+	username := chi.URLParam(r, "username")
+	slug := chi.URLParam(r, "slug")
+
+	var admin database.AdminUser
+	if err := database.GetDB().Where("username = ?", username).First(&admin).Error; err != nil {
+		http.Error(w, "User not found", http.StatusNotFound)
+		return
+	}
+
+	var post database.Post
+	if err := database.GetDB().Where("slug = ? AND admin_user_id = ?", slug, admin.ID).First(&post).Error; err != nil {
+		http.Error(w, "Post not found", http.StatusNotFound)
+		return
+	}
+
+	viewer := getSignedInUserOrNil(r)
+	if !post.Published {
+		if viewer == nil || viewer.ID != admin.ID {
+			http.Error(w, "Post not found", http.StatusNotFound)
+			return
+		}
+	}
+
+	RenderTemplate(w, r, "public_view_post", post)
+}
+
+func PublicViewUserByUsername(w http.ResponseWriter, r *http.Request) {
+	username := chi.URLParam(r, "username")
+
+	var user database.AdminUser
 	result := database.GetDB().Preload("Posts", func(db *gorm.DB) *gorm.DB {
-		return db.Select("id, title, admin_user_id", "published_date").Where("published = ?", true).Order("published_date DESC")
-	}).First(&user, userID)
+		return db.Select("id, title, admin_user_id", "published_date", "slug").Where("published = ?", true).Order("published_date DESC")
+	}).Where("username = ?", username).First(&user)
 	if result.Error != nil {
 		http.Error(w, "User not found", http.StatusNotFound)
 		return

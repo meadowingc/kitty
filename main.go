@@ -86,8 +86,10 @@ func initRouter() *chi.Mux {
 		r.HandleFunc("/post/{postID}/delete", site.DeletePost)
 	})
 
+	r.Get("/u/{username}/{slug}", site.PublicViewPostBySlug)
+	r.Get("/u/{userID:[0-9]+}", site.PublicViewUser)
+	r.Get("/u/{username}", site.PublicViewUserByUsername)
 	r.Get("/post/{postID}", site.PublicViewPost)
-	r.Get("/u/{userID}", site.PublicViewUser)
 
 	fileServer := http.FileServer(http.Dir("./assets"))
 	r.Handle("/assets/*", http.StripPrefix("/assets", fileServer))
