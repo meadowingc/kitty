@@ -652,3 +652,64 @@ footer {
   .form-error { color:#ff6b5e; }
   #bodyEditor { border-top:1px dashed var(--cozy-brown-700); }
 }
+
+/* --- Dashboard Tabs --- */
+.tabs {
+  display:flex;
+  flex-wrap:wrap;
+}
+.tabs .tab-btn {
+  position:relative;
+  font-size:.75rem;
+  letter-spacing:.05em;
+  font-weight:600;
+  text-transform:uppercase;
+  padding:.55rem 1rem;
+  border-radius:.65rem .65rem 0 0;
+  background:var(--cozy-brown-100);
+  border:1px solid var(--cozy-brown-300);
+  color:var(--cozy-brown-800);
+  transition:background-color .2s, color .2s, box-shadow .2s;
+}
+/* Square inner top corners so tabs join cleanly */
+.tabs .tab-btn:first-child {
+  border-top-right-radius:0;
+}
+.tabs .tab-btn:last-child {
+  border-top-left-radius:0;
+}
+.tabs .tab-btn:hover {
+  background:var(--cozy-brown-200);
+}
+.tabs .tab-btn.active {
+  background:var(--cozy-orange-500);
+  border-color:var(--cozy-orange-500);
+  color:#fff;
+  box-shadow:0 2px 10px -2px rgba(0,0,0,.15);
+}
+.tabs .tab-btn.active::after {
+  content:"";
+  position:absolute;
+  inset:auto 0 -6px 0;
+  height:4px;
+  border-radius:2px;
+  background:linear-gradient(90deg, var(--cozy-orange-400), var(--cozy-orange-600));
+}
+@media (prefers-color-scheme: dark) {
+  .tabs .tab-btn {
+    background:var(--cozy-brown-800);
+    border-color:var(--cozy-brown-600);
+    color:var(--cozy-brown-100);
+  }
+  .tabs .tab-btn:hover {
+    background:var(--cozy-brown-700);
+  }
+  .tabs .tab-btn.active {
+    background:var(--cozy-orange-500);
+    color:#fff;
+    border-color:var(--cozy-orange-500);
+  }
+  .tabs .tab-btn.active::after {
+    background:linear-gradient(90deg, var(--cozy-orange-400), var(--cozy-orange-600));
+  }
+}

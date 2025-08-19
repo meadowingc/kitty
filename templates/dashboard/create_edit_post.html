@@ -22,7 +22,8 @@
     {{ end }}
 
     <form id="postEditForm" action="{{ $formActionUrl }}" method="post" style="margin:0;">
-        <div class="post-editor-actions" style="margin:0 0 1rem;">
+        <div class="post-editor-actions" style="margin:0 0 1rem; display:flex; gap:.5rem; flex-wrap:wrap;">
+            <a href="/dashboard" class="btn-cozy-secondary" style="text-decoration:none;line-height: 100%;">← Back</a>
             <input type="submit" class="btn-cozy" value="{{if $isEditing}}Update{{else}}Create{{end}} Post">
             {{ if $isEditing }}
             <a href="/u/{{ pathEscape $.Global.CurrentUser.Username }}/{{ pathEscape .Data.Slug }}" target="_blank" class="btn-cozy-ghost" style="text-decoration:none;">
@@ -84,7 +85,7 @@
 
         <div id="bodyEditorShell">
             <div style="padding:.6rem .9rem; font-size:.7rem; font-weight:600; letter-spacing:.05em; text-transform:uppercase; opacity:.7;">
-                Body (auto-save enabled)
+                Body{{if $isEditing}} (auto-save enabled){{else}} (manual save){{end}}
             </div>
             <div id="bodyEditor"></div>
             <textarea name="body" id="body" hidden>{{if $isEditing}}{{.Data.Body}}{{end}}</textarea>
@@ -95,6 +96,8 @@
 {{end}}
 
 {{define "scripts"}}
+{{$isEditing := (and .Data (or .Data.ID false))}}
+
 <script src="https://unpkg.com/overtype/dist/overtype.min.js"></script>
 <script>
 window.addEventListener('load', function () {
@@ -179,6 +182,8 @@ window.addEventListener('load', function () {
     // Start monitoring after a delay
     setTimeout(startScrollMonitoring, 200);
 
+    {{ if $isEditing }}
+    // autosave functionality
     function triggerSave() {
         const form = document.querySelector('form#postEditForm');
         const formData = new FormData(form);
@@ -222,11 +227,12 @@ window.addEventListener('load', function () {
         if (e.ctrlKey && e.key === 's') {
             e.preventDefault();
             triggerSave();
-        } else {
+        } else if (isEditing) {
             clearTimeout(saveTimeout);
-            saveTimeout = setTimeout(triggerSave, 2000); // autosave after inactivity
+            saveTimeout = setTimeout(triggerSave, 2000); // autosave after inactivity (edit mode only)
         }
     });
+    {{ end }}
 });
 </script>
 {{end}}

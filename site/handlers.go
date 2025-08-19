@@ -123,8 +123,38 @@ func UserLogout(w http.ResponseWriter, r *http.Request) {
 }
 
 func UserDashboardHome(w http.ResponseWriter, r *http.Request) {
-	_ = getSignedInUserOrFail(r)
-	RenderTemplate(w, r, "dashboard/dashboard", nil)
+	adminUser := getSignedInUserOrFail(r)
+
+	var posts []database.Post
+	result := database.GetDB().Where(&database.Post{
+		AdminUserID: adminUser.ID,
+	}).Order("published_date DESC").Find(&posts)
+	if result.Error != nil {
+		http.Error(w, "Error fetching posts", http.StatusInternalServerError)
+		return
+	}
+
+	postsOnly := make([]database.Post, 0, len(posts))
+	pagesOnly := make([]database.Post, 0, len(posts))
+	for _, p := range posts {
+		if p.IsPage {
+			pagesOnly = append(pagesOnly, p)
+		} else {
+			postsOnly = append(postsOnly, p)
+		}
+	}
+
+	data := struct {
+		All   []database.Post
+		Posts []database.Post
+		Pages []database.Post
+	}{
+		All:   posts,
+		Posts: postsOnly,
+		Pages: pagesOnly,
+	}
+
+	RenderTemplate(w, r, "dashboard/dashboard", data)
 }
 
 func UserPostList(w http.ResponseWriter, r *http.Request) {
