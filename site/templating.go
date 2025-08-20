@@ -13,6 +13,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gorilla/csrf"
+
 	"github.com/gomarkdown/markdown"
 	"github.com/gomarkdown/markdown/html"
 	"github.com/gomarkdown/markdown/parser"
@@ -23,10 +25,45 @@ var templatesCache sync.Map
 
 func RenderTemplate(w http.ResponseWriter, r *http.Request, templateName string, data any) {
 	type GlobalTemplateData struct {
-		CurrentUser *database.AdminUser
-		IsDebug     bool
-		SiteName    string
-		PublicURL   string
+		CurrentUser      *database.AdminUser
+		ViewingUser      *database.AdminUser
+		IsDebug          bool
+		SiteName         string
+		PublicURL        string
+		DisplaySiteTitle string
+		DisplayEmoji     string
+		HeaderHTML       template.HTML
+		RequestPath      string
+	}
+
+	currentUser := getSignedInUserOrNil(r)
+	viewingUser := getViewingUserFromContext(r)
+
+	displayTitle := constants.APP_NAME
+	if viewingUser != nil {
+		if strings.TrimSpace(viewingUser.BlogTitle) != "" {
+			displayTitle = strings.TrimSpace(viewingUser.BlogTitle)
+		} else if strings.TrimSpace(viewingUser.Username) != "" {
+			displayTitle = viewingUser.Username
+		}
+	}
+
+	displayEmoji := "😺"
+	if viewingUser != nil && strings.TrimSpace(viewingUser.Emoji) != "" {
+		displayEmoji = strings.TrimSpace(viewingUser.Emoji)
+	}
+
+	var headerHTML template.HTML
+	if viewingUser != nil && strings.TrimSpace(viewingUser.HeaderMarkdown) != "" {
+		headerSrc := applyShortcodesToContent(viewingUser.HeaderMarkdown, viewingUser)
+		extensions := parser.CommonExtensions | parser.AutoHeadingIDs
+		p := parser.NewWithExtensions(extensions)
+		doc := p.Parse([]byte(headerSrc))
+		htmlFlags := html.CommonFlags | html.HrefTargetBlank
+		opts := html.RendererOptions{Flags: htmlFlags}
+		renderer := html.NewRenderer(opts)
+		rendered := markdown.Render(doc, renderer)
+		headerHTML = template.HTML(rendered)
 	}
 
 	templateData := struct {
@@ -34,10 +71,15 @@ func RenderTemplate(w http.ResponseWriter, r *http.Request, templateName string,
 		Data   any
 	}{
 		Global: GlobalTemplateData{
-			CurrentUser: getSignedInUserOrNil(r),
-			IsDebug:     constants.DEBUG_MODE,
-			SiteName:    constants.APP_NAME,
-			PublicURL:   constants.PUBLIC_URL,
+			CurrentUser:      currentUser,
+			ViewingUser:      viewingUser,
+			IsDebug:          constants.DEBUG_MODE,
+			SiteName:         constants.APP_NAME,
+			PublicURL:        constants.PUBLIC_URL,
+			DisplaySiteTitle: displayTitle,
+			DisplayEmoji:     displayEmoji,
+			HeaderHTML:       headerHTML,
+			RequestPath:      r.URL.Path,
 		},
 		Data: data,
 	}
@@ -48,6 +90,9 @@ func RenderTemplate(w http.ResponseWriter, r *http.Request, templateName string,
 		templatesDir := "templates/"
 
 		baseTemplate := template.New("layout.html").Funcs(template.FuncMap{
+			"csrfField": func() template.HTML {
+				return csrf.TemplateField(r)
+			},
 			"jsonListToCommaSeparated": func(jsonList datatypes.JSON) string {
 				var tags []string
 				err := json.Unmarshal(jsonList, &tags)
@@ -60,12 +105,25 @@ func RenderTemplate(w http.ResponseWriter, r *http.Request, templateName string,
 				}
 				return strings.Join(tags, ", ")
 			},
+			"jsonListToSlice": func(jsonList datatypes.JSON) []string {
+				var tags []string
+				_ = json.Unmarshal(jsonList, &tags)
+				out := make([]string, 0, len(tags))
+				for _, t := range tags {
+					tt := strings.TrimSpace(t)
+					if tt != "" {
+						out = append(out, tt)
+					}
+				}
+				return out
+			},
 			"parseMarkdown": func(markdownStr string) template.HTML {
+				// Apply shortcodes (posts/archive) prior to markdown rendering using viewing user context
+				processed := applyShortcodesToContent(markdownStr, viewingUser)
 				extensions := parser.CommonExtensions | parser.AutoHeadingIDs
 				p := parser.NewWithExtensions(extensions)
-				doc := p.Parse([]byte(markdownStr))
+				doc := p.Parse([]byte(processed))
 
-				// create HTML renderer with extensions
 				htmlFlags := html.CommonFlags | html.HrefTargetBlank
 				opts := html.RendererOptions{Flags: htmlFlags}
 				renderer := html.NewRenderer(opts)
@@ -83,6 +141,10 @@ func RenderTemplate(w http.ResponseWriter, r *http.Request, templateName string,
 			"pathEscape": func(s string) string {
 				return url.PathEscape(s)
 			},
+			"uintPtrEq": func(a uint, b *uint) bool { return b != nil && a == *b },
+			"isHomePageView": func(requestPath, username string, isPage bool) bool {
+				return isPage && requestPath == "/u/"+url.PathEscape(username)
+			},
 		})
 
 		baseTemplate = template.Must(baseTemplate.ParseFiles(filepath.Join(templatesDir, "layout.html")))
@@ -92,7 +154,6 @@ func RenderTemplate(w http.ResponseWriter, r *http.Request, templateName string,
 	}
 
 	err := actualTemplate.(*template.Template).Execute(w, templateData)
-
 	if err != nil {
 		log.Printf("Template execution error: %v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)

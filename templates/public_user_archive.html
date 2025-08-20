@@ -1,0 +1,35 @@
+{{template "layout.html" .}}
+
+{{define "title"}}Archive{{end}}
+
+{{define "content"}}
+<h1>Archive</h1>
+<p><a href="/u/{{ pathEscape .Data.Username }}">← Back to recent posts</a></p>
+
+{{if .Data.YearGroups}}
+<div class="archive-groups">
+    {{range .Data.YearGroups}}
+    <section style="margin-bottom:2rem;">
+        <h2 style="margin-bottom:.4rem;">{{.Year}}</h2>
+        {{if .Posts}}
+        <ul style="list-style:none; padding:0; margin:0;">
+            {{range .Posts}}
+            <li style="display:flex; gap:12px; padding:6px 0; border-bottom:1px solid #eceff4;">
+                <span style="flex:0 0 130px; font-family:monospace; font-size:.8rem; opacity:.7;">
+                    <time datetime="{{.PublishedDate | dateFmt "2006-01-02"}}">{{.PublishedDate | dateFmt "Jan 02, 2006"}}</time>
+                </span>
+                <a href="/u/{{ pathEscape $.Data.Username }}/{{ pathEscape .Slug }}">{{.Title}}</a>
+            </li>
+            {{end}}
+        </ul>
+        {{else}}
+        <p><i>No posts for this year.</i></p>
+        {{end}}
+    </section>
+    {{end}}
+</div>
+{{else}}
+<p><i>No posts yet.</i></p>
+{{end}}
+
+{{end}}

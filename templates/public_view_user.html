@@ -59,6 +59,14 @@
         <a href="/u/{{ pathEscape $.Data.Username }}/{{ pathEscape .Slug }}">
             {{.Title}}
         </a>
+        {{ $tags := jsonListToSlice .Tags }}
+        {{ if $tags }}
+        <small style="margin-left:12px; font-size:.7rem;">
+            {{ range $tags }}
+            <a href="/u/{{ pathEscape $.Data.Username }}/tag/{{ pathEscape . }}">{{ . }}</a>
+            {{ end }}
+        </small>
+        {{ end }}
     </li>
     {{end}}
 </ul>

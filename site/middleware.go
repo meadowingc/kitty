@@ -5,6 +5,8 @@ import (
 	"kitty/database"
 	"net/http"
 	"strings"
+
+	"github.com/gorilla/csrf"
 )
 
 // RealIPMiddleware extracts the client's real IP address from the
@@ -78,6 +80,18 @@ func AuthProtectedMiddleware(next http.Handler) http.Handler {
 		}
 
 		// otherwise, continue to the next handler
+		next.ServeHTTP(w, r)
+	})
+}
+
+// PlaintextCSRFMiddleware marks plaintext (non-TLS) requests so gorilla/csrf
+// uses http scheme when performing same-origin comparison, avoiding
+// false 'origin invalid' on local development over http.
+func PlaintextCSRFMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.TLS == nil {
+			r = csrf.PlaintextHTTPRequest(r)
+		}
 		next.ServeHTTP(w, r)
 	})
 }

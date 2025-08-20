@@ -24,6 +24,7 @@
 <hr>
 <h2>Import from Bearblog</h2>
 <form action="/dashboard/import" method="post" enctype="multipart/form-data">
+    {{ csrfField }}
     <label for="bear_export">Bear .csv export</label>
     <input type="file" id="bear_export" name="bear_export">
 

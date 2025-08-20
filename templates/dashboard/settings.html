@@ -1,0 +1,107 @@
+{{template "layout.html" .}}
+
+{{define "title"}}Settings{{end}}
+
+{{define "content"}}
+<h1>Blog Settings</h1>
+
+<div class="settings-shell" style="max-width:950px;">
+
+    <div class="meta-card" style="margin:0 0 1.25rem;">
+        <div class="meta-section-heading">
+            <h4>Info & Tips</h4>
+        </div>
+        <div class="field" style="font-size:.8rem; line-height:1.45;">
+            <p style="margin:.4rem 0;">
+                To add an RSS link to your header/navigation, include markdown like:
+                <code>[RSS](/u/{{ pathEscape .Data.User.Username }}/feed.xml)</code> in the Header Markdown field.
+            </p>
+            <p style="margin:.4rem 0;">
+                Absolute URL:
+                <code>{{.Global.PublicURL}}/u/{{ pathEscape .Data.User.Username }}/feed.xml</code>
+            </p>
+            <p style="margin:.4rem 0;">
+                The header markdown renders above all posts/pages.
+            </p>
+            <p style="margin:.4rem 0;">
+                Shortcodes you can embed in Header Markdown or any Post/Page body:
+            </p>
+            <ul style="margin:.4rem 0 .6rem 1.1rem; padding:0; font-size:.75rem;">
+                <li><code>{posts}</code> – list latest 10 posts.</li>
+                <li><code>{posts:5}</code> – list latest 5 posts.</li>
+                <li><code>{posts:tag=tech}</code> – list latest 10 posts tagged <code>tech</code>.</li>
+                <li><code>{posts:25:tag=go}</code> – list latest 25 posts tagged <code>go</code>.</li>
+                <li><code>{archive}</code> – full archive grouped by year (also available at <code>/u/{{ pathEscape .Data.User.Username }}/archive</code>).</li>
+            </ul>
+            <p style="margin:.4rem 0;">
+                Add an archive link manually, e.g. <code>[Archive](/u/{{ pathEscape .Data.User.Username }}/archive)</code>.
+            </p>
+        </div>
+    </div>
+
+    <form method="post" style="margin:0;">
+        {{ csrfField }}
+
+        <div class="meta-card" style="margin:0 0 1.25rem;">
+            <div class="meta-section-heading">
+                <h4>General</h4>
+            </div>
+            <div class="field" style="margin-bottom:1em;">
+                <label for="emoji" class="form-label-sm">Site Emoji (optional)</label>
+                <input type="text" id="emoji" name="emoji" maxlength="16"
+                        value="{{.Data.User.Emoji}}" class="input-cozy-sm" placeholder="e.g. 😺">
+                <div class="form-hint">Short emoji or text (max 16 chars). Defaults to 😺 if empty.</div>
+            </div>
+
+            <div class="field" style="margin-bottom:1em;">
+                <label for="blogTitle" class="form-label-sm">Blog Title (optional)</label>
+                <input type="text" id="blogTitle" name="blogTitle" maxlength="120"
+                        value="{{.Data.User.BlogTitle}}" class="input-cozy-sm" placeholder="Defaults to username">
+                <div class="form-hint">If empty, your username is used.</div>
+            </div>
+
+            <div class="field">
+                <label for="headerMarkdown" class="form-label-sm">Header Markdown (optional)</label>
+                <textarea id="headerMarkdown" name="headerMarkdown" rows="8"
+                            class="input-cozy-sm"
+                            style="font-family:monospace; resize:vertical;"
+                            placeholder="Appears above all posts/pages">{{.Data.User.HeaderMarkdown}}</textarea>
+                <div class="form-hint">Supports basic markdown. Max 8000 chars.</div>
+            </div>
+        </div>
+
+        <div class="meta-card" style="margin:0 0 1.25rem;">
+            <div class="meta-section-heading">
+                <h4>Homepage</h4>
+            </div>
+            <div class="post-details-columns">
+                <div class="col">
+                    <div class="field">
+                        <label for="homePagePostID" class="form-label-sm">Homepage Page (optional)</label>
+                        <select id="homePagePostID" name="homePagePostID" class="input-cozy-sm">
+                            <option value="">-- Recent posts listing --</option>
+                            {{range .Data.Pages}}
+                            <option value="{{.ID}}" {{if uintPtrEq .ID $.Data.User.HomePagePostID}}selected{{end}}>
+                                {{.Title}}
+                            </option>
+                            {{end}}
+                        </select>
+                        <div class="form-hint">
+                            Select a published Page to show it instead of the post listing at
+                            <code>/u/{{.Data.User.Username}}</code>.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="post-editor-actions" style="display:flex; gap:.5rem; flex-wrap:wrap; margin:0 0 1rem;">
+            <a href="/dashboard" class="btn-cozy-secondary" style="text-decoration:none;line-height:100%;">← Back</a>
+            <button type="submit" class="btn-cozy">Save Settings</button>
+            <a href="/u/{{ pathEscape .Data.User.Username }}" target="_blank" class="btn-cozy-ghost" style="text-decoration:none;">
+                View Public Site
+            </a>
+        </div>
+    </form>
+</div>
+{{end}}

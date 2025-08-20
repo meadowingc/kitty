@@ -1,0 +1,23 @@
+{{template "layout.html" .}}
+
+{{define "title"}}Tag: {{.Data.Tag}}{{end}}
+
+{{define "content"}}
+<h1>Tag: {{.Data.Tag}}</h1>
+<p><a href="/u/{{ pathEscape .Data.Username }}">← All posts</a></p>
+
+{{if .Data.Posts}}
+<ul class="post-list" style="list-style:none; padding:0;">
+    {{range .Data.Posts}}
+    <li style="display:flex; gap:12px; padding:8px 0; border-bottom:1px solid #eceff4;">
+        <span style="flex:0 0 130px; font-family:monospace; font-size:.85rem; opacity:.7;">
+            <time datetime="{{.PublishedDate | dateFmt "2006-01-02"}}">{{.PublishedDate | dateFmt "Jan 02, 2006"}}</time>
+        </span>
+        <a href="/u/{{ pathEscape $.Data.Username }}/{{ pathEscape .Slug }}">{{.Title}}</a>
+    </li>
+    {{end}}
+</ul>
+{{else}}
+<p>No posts found for this tag.</p>
+{{end}}
+{{end}}

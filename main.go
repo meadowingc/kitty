@@ -14,13 +14,18 @@ import (
 	"time"
 
 	"github.com/go-chi/cors"
+	"github.com/gorilla/csrf"
 
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/httprate"
+	"github.com/joho/godotenv"
 )
 
 func main() {
+	// Load .env file if present (non-fatal if missing)
+	_ = godotenv.Load()
+
 	_ = database.GetDB() // force database initialization
 	r := initRouter()
 
@@ -60,11 +65,53 @@ func initRouter() *chi.Mux {
 	r.Use(site.RealIPMiddleware)
 	r.Use(middleware.Logger)
 	r.Use(httprate.LimitByIP(50, time.Minute)) // general rate limiter for all routes (shared across all routes)
-	r.Use(middleware.Recoverer)
+
+	if constants.DEBUG_MODE {
+		r.Use(site.PlaintextCSRFMiddleware) // mark plaintext requests before CSRF middleware
+	}
+
+	csrfKey := os.Getenv("CSRF_AUTH_KEY")
+	if csrfKey == "" {
+		log.Fatal("CSRF_AUTH_KEY not set. Provide a 32+ byte secret via environment or .env file.\nExample (bash): echo CSRF_AUTH_KEY=$(openssl rand -base64 32) >> .env")
+	}
+	trustedOriginsHosts := []string{
+		"localhost:6835",
+		"127.0.0.1:6835",
+		"[::1]:6835",
+		"kitty.meadow.cafe",
+	}
+
+	csrfMiddleware := csrf.Protect([]byte(csrfKey),
+		csrf.Path("/"),
+		csrf.SameSite(csrf.SameSiteLaxMode),
+		csrf.TrustedOrigins(trustedOriginsHosts),
+		csrf.Secure(!constants.DEBUG_MODE),
+	)
+
+	r.Use(csrfMiddleware)
+	// r.Use(middleware.Recoverer)
 	r.Use(site.TryPutUserInContextMiddleware)
 
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-		site.RenderTemplate(w, r, "home", nil)
+		type homePost struct {
+			Title         string
+			Slug          string
+			PublishedDate time.Time
+			Username      string
+		}
+
+		var recent []homePost
+		database.GetDB().Table("posts").
+			Select("posts.title, posts.slug, posts.published_date, admin_users.username").
+			Joins("JOIN admin_users ON admin_users.id = posts.admin_user_id").
+			Where("posts.published = ? AND posts.is_page = ? AND posts.show_on_homepage = ?", true, false, true).
+			Order("posts.published_date desc").
+			Limit(constants.HOMEPAGE_RECENT_POSTS_LIMIT).
+			Scan(&recent)
+
+		site.RenderTemplate(w, r, "home", struct {
+			Posts []homePost
+		}{Posts: recent})
 	})
 
 	r.Get("/terms-and-conditions", func(w http.ResponseWriter, r *http.Request) {
@@ -84,8 +131,12 @@ func initRouter() *chi.Mux {
 		r.HandleFunc("/post/new", site.CreatePost)
 		r.HandleFunc("/post/{postID}", site.UpdatePost)
 		r.HandleFunc("/post/{postID}/delete", site.DeletePost)
+		r.HandleFunc("/settings", site.UserSettings)
 	})
 
+	r.Get("/u/{username}/feed.xml", site.PublicUserRSSFeed)
+	r.Get("/u/{username}/tag/{tag}", site.PublicViewUserTag)
+	r.Get("/u/{username}/archive", site.PublicViewUserArchive)
 	r.Get("/u/{username}/{slug}", site.PublicViewPostBySlug)
 	r.Get("/u/{userID:[0-9]+}", site.PublicViewUser)
 	r.Get("/u/{username}", site.PublicViewUserByUsername)

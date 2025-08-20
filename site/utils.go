@@ -1,6 +1,7 @@
 package site
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
@@ -56,26 +57,42 @@ func buildPostFromFormRequest(r *http.Request) (database.Post, error) {
 		return database.Post{}, errors.New("user not signed in")
 	}
 
-	title := r.FormValue("title")
-	body := r.FormValue("body")
+	// Trim and validate title
+	title := strings.TrimSpace(r.FormValue("title"))
+	if title == "" {
+		return database.Post{}, errors.New("title cannot be empty")
+	}
 
+	body := r.FormValue("body")
 	if len(body) > constants.MAX_POST_LENGTH {
 		return database.Post{}, errors.New("post body too long. It must be less than " + strconv.Itoa(constants.MAX_POST_LENGTH) + " characters")
 	}
 
-	slug := r.FormValue("slug")
+	// Trim slug (may still be empty and later auto-generated)
+	slug := strings.TrimSpace(r.FormValue("slug"))
 	publishedDate, _ := tryParseDate(r.FormValue("publishedDate"))
 	isPage := r.FormValue("isPage") == "on"
 	metaDescription := r.FormValue("metaDescription")
 	metaImage := r.FormValue("metaImage")
 	lang := r.FormValue("lang")
-	tags := r.FormValue("tags")
-	published := r.FormValue("published") == "on"
 
-	tagsJSON, err := json.Marshal(strings.Split(tags, ","))
+	// Tags: split, trim, drop empties
+	rawTags := r.FormValue("tags")
+	parts := strings.Split(rawTags, ",")
+	cleanTags := make([]string, 0, len(parts))
+	for _, p := range parts {
+		t := strings.TrimSpace(p)
+		if t != "" {
+			cleanTags = append(cleanTags, t)
+		}
+	}
+	tagsJSON, err := json.Marshal(cleanTags)
 	if err != nil {
 		return database.Post{}, errors.New("failed to parse post tags")
 	}
+
+	published := r.FormValue("published") == "on"
+	showOnHomepage := r.FormValue("showOnHomepage") == "on"
 
 	newPost := database.Post{
 		AdminUserID:     adminUser.ID,
@@ -89,6 +106,7 @@ func buildPostFromFormRequest(r *http.Request) (database.Post, error) {
 		Lang:            lang,
 		Tags:            datatypes.JSON(tagsJSON),
 		Published:       published,
+		ShowOnHomepage:  showOnHomepage,
 	}
 
 	return newPost, nil
@@ -117,4 +135,18 @@ func generateAuthToken() (string, error) {
 	}
 	token := base64.URLEncoding.EncodeToString(tokenBytes)
 	return token, nil
+}
+
+// viewing user (public blog owner) context helpers
+type viewingUserKeyType struct{}
+
+var viewingUserKey viewingUserKeyType
+
+func setViewingUserInContext(r *http.Request, user *database.AdminUser) *http.Request {
+	return r.WithContext(context.WithValue(r.Context(), viewingUserKey, user))
+}
+
+func getViewingUserFromContext(r *http.Request) *database.AdminUser {
+	user, _ := r.Context().Value(viewingUserKey).(*database.AdminUser)
+	return user
 }

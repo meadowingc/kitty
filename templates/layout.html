@@ -6,24 +6,30 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="/assets/css/main.css">
     <link rel="icon"
-        href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>😺</text></svg>">
+        href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>{{ .Global.DisplayEmoji }}</text></svg>">
     <script src="https://mochi.meadow.cafe/reaper/meadow/embed/5.js" async></script> 
-    <title>{{.Global.SiteName}} - {{template "title" .}}</title>
+    <title>{{.Global.DisplaySiteTitle}} - {{template "title" .}}</title>
+    {{if .Global.ViewingUser}}
+    <link rel="alternate" type="application/rss+xml" title="{{.Global.DisplaySiteTitle}} RSS" href="/u/{{ pathEscape .Global.ViewingUser.Username }}/feed.xml">
+    <link rel="archives" href="/u/{{ pathEscape .Global.ViewingUser.Username }}/archive">
+    {{end}}
 
     {{block "styles" .}}{{end}}
 </head>
 
 <body>
     <header>
-        <a class="title" href="/">
+        {{if .Global.ViewingUser}}<a class="title" href="/u/{{ pathEscape .Global.ViewingUser.Username }}">{{else}}<a class="title" href="/">{{end}}
             <h1>
-                <span style="font-size: 1.2em;">😺</span> {{.Global.SiteName}}
+                <span style="font-size: 1.2em;">{{.Global.DisplayEmoji}}</span> {{.Global.DisplaySiteTitle}}
             </h1>
         </a>
         <nav class="nav-right">
             {{if .Global.CurrentUser}}
             <a href="/dashboard" class="nav-link-cozy">Dashboard</a>
+            <a href="/dashboard/settings" class="nav-link-cozy">Settings</a>
             <form action="/logout" method="post" style="display: inline;">
+                {{ csrfField }}
                 <button type="submit" class="btn-cozy-ghost">Logout</button>
             </form>
             {{else}}
@@ -32,6 +38,12 @@
             {{end}}
         </nav>
     </header>
+    {{if .Global.HeaderHTML}}
+    <div class="user-header-markdown">
+        {{.Global.HeaderHTML}}
+    </div>
+    {{end}}
+    {{/* Removed automatic visible RSS link; users can add their own via Header Markdown */}}
 
     <main class="mb-8">
         {{template "content" .}}

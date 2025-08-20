@@ -19,4 +19,28 @@
         This platform is a development project and may be unreliable at times. For a more robust solution, consider other CMS services.
     </p>
 </div>
+
+{{if .Data.Posts}}
+<hr class="my-8">
+<section>
+    <h2 class="text-md font-semibold mb-3">Recent Posts</h2>
+    <ul class="post-list" style="list-style:none; padding:0;">
+        {{range .Data.Posts}}
+        <li style="padding:6px 0; border-bottom:1px solid #eceff4;">
+            <time datetime="{{.PublishedDate | dateFmt " 2006-01-02"}}" style="font-family:monospace; font-size:14px;">
+                {{.PublishedDate | dateFmt "Jan 02, 2006"}}
+            </time>
+            &nbsp;
+            <a href="/u/{{ pathEscape .Username }}/{{ pathEscape .Slug }}">{{.Title}}</a>
+            <small style="margin-left:8px; opacity:.7;">
+                (<a href="/u/{{ pathEscape .Username }}">{{.Username}}</a>)
+            </small>
+        </li>
+        {{end}}
+    </ul>
+</section>
+{{else}}
+<hr class="my-8">
+<p class="text-sm mt-4">No recent posts yet.</p>
+{{end}}
 {{end}}

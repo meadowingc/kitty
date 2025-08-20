@@ -3,15 +3,25 @@
 {{define "title"}}Sign In{{end}}
 
 {{define "content"}}
-<h1>Dashboard Sign In</h1>
-<form method="post">
-    <label for="username">Username:</label>
-    <input type="text" id="username" name="username" required>
-    <br />
-    <label for="password">Password:</label>
-    <input type="password" id="password" name="password" required>
-    <br />
-    <button type="submit">Sign In</button>
+<form method="post" style="margin-top:1em;">
+    {{ csrfField }}
+    <div class="meta-card" style="margin:0 0 1.25rem;">
+        <div class="meta-section-heading">
+            <h4>Dashboard Sign In</h4>
+        </div>
+
+        <div class="field" style="margin-bottom:1em;">
+            <label for="username" class="form-label-sm">Username:</label>
+            <input type="text" id="username" name="username" required class="input-cozy-sm">
+        </div>
+
+        <div class="field" style="margin-bottom:1em;">
+            <label for="password" class="form-label-sm">Password:</label>
+            <input type="password" id="password" name="password" required class="input-cozy-sm">
+        </div>
+
+        <button type="submit" class="btn-cozy">Sign In</button>
+    </div>
 </form>
 
 <br />
@@ -22,4 +32,6 @@
     <small>Note that by using <i>{{.Global.SiteName}}</i> you agree to our <a href="/terms-and-conditions">Terms and
             Conditions</a>.</small>
 </div>
+
+
 {{end}}

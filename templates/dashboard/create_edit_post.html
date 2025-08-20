@@ -17,11 +17,13 @@
     {{ if $isEditing }}
     <form action="/dashboard/post/{{.Data.ID}}/delete" method="post"
         onsubmit="return confirm('Are you sure you want to delete this post?');">
+        {{ csrfField }}
         <input type="submit" value="Delete Post" class="btn-cozy-secondary">
     </form>
     {{ end }}
 
     <form id="postEditForm" action="{{ $formActionUrl }}" method="post" style="margin:0;">
+        {{ csrfField }}
         <div class="post-editor-actions" style="margin:0 0 1rem; display:flex; gap:.5rem; flex-wrap:wrap;">
             <a href="/dashboard" class="btn-cozy-secondary" style="text-decoration:none;line-height: 100%;">← Back</a>
             <input type="submit" class="btn-cozy" value="{{if $isEditing}}Update{{else}}Create{{end}} Post">
@@ -75,10 +77,33 @@
                         <label for="lang" class="form-label-sm">Lang</label>
                         <input class="input-cozy-sm" type="text" id="lang" name="lang" {{if $isEditing}}value="{{.Data.Lang}}" {{else}}value="en" {{end}} required>
                     </div>
+                    {{if .Data.TagSuggestions}}
+                    <div class="field" style="margin-top:.4rem;">
+                        <label for="tags" class="form-label-sm">Known tags</label>
+                        <div id="tagSuggestions" style="font-size:.7rem; line-height:1.5;">
+                            <style>
+                                #tagSuggestions span.tag-suggestion {
+                                    cursor: pointer;
+                                    color: #c05621;
+                                    text-decoration: none;
+                                    border-bottom: 1px dotted #c05621;
+                                }
+                                #tagSuggestions span.tag-suggestion:hover {
+                                    color: #9c4221;
+                                }
+                                #tagSuggestions span.tag-suggestion:not(:last-child)::after {
+                                    content: ", ";
+                                }
+                            </style>
+                            {{range .Data.TagSuggestions}}<span class="tag-suggestion" data-tag="{{.}}">{{.}}</span>{{end}}
+                        </div>
+                    </div>
+                    {{end}}
                 </div>
                 <div class="flags-row">
                     <label><input type="checkbox" id="published" name="published" {{if and $isEditing .Data.Published}}checked{{end}}> Published</label>
                     <label><input type="checkbox" id="isPage" name="isPage" {{if and $isEditing .Data.IsPage}}checked{{end}}> Page</label>
+                    <label><input type="checkbox" id="showOnHomepage" name="showOnHomepage" {{if and $isEditing .Data.ShowOnHomepage}}checked{{end}}> Show on global home</label>
                 </div>
             </div>
         </div>
@@ -141,6 +166,28 @@ window.addEventListener('load', function () {
     }
 
     ensureScrollReset();
+    
+    // Tag suggestion click handler
+    (function(){
+        const tagSuggestions = document.getElementById('tagSuggestions');
+        if(!tagSuggestions) return;
+        tagSuggestions.addEventListener('click', function(e){
+            const btn = e.target.closest('span.tag-suggestion');
+            if(!btn) return;
+            const t = btn.getAttribute('data-tag');
+            const input = document.getElementById('tags');
+            if(!input) return;
+            let parts = input.value.split(',').map(s => s.trim()).filter(s => s.length > 0);
+            if(!parts.includes(t)){
+                parts.push(t);
+                input.value = parts.join(', ');
+                // Focus input and move cursor to the end
+                input.focus();
+                input.setSelectionRange(input.value.length, input.value.length);
+                input.scrollLeft = input.scrollWidth;
+            }
+        });
+    })();
 
 
     // BFCache / soft reload mitigation

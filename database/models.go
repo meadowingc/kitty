@@ -20,12 +20,17 @@ type Post struct {
 	Lang            string
 	Tags            datatypes.JSON
 	Published       bool
+	ShowOnHomepage  bool
 }
 
 type AdminUser struct {
 	gorm.Model
-	Username     string         `gorm:"uniqueIndex"`
-	PasswordHash datatypes.JSON `gorm:"type:json"`
-	SessionToken string         `gorm:"index;unique"`
-	Posts        []Post         `gorm:"foreignKey:AdminUserID"`
+	Username       string         `gorm:"uniqueIndex"`
+	PasswordHash   datatypes.JSON `gorm:"type:json"`
+	SessionToken   string         `gorm:"index;unique"`
+	Posts          []Post         `gorm:"foreignKey:AdminUserID"`
+	HomePagePostID *uint
+	HeaderMarkdown string `gorm:"type:text"`
+	BlogTitle      string
+	Emoji          string
 }

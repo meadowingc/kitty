@@ -3,6 +3,7 @@
 {{define "title"}}{{.Data.Title}}{{end}}
 
 {{define "content"}}
+{{ if not (and .Global.ViewingUser (isHomePageView .Global.RequestPath .Global.ViewingUser.Username .Data.IsPage)) }}
 <h1>{{.Data.Title}}</h1>
 <p>
     <i>
@@ -11,7 +12,22 @@
         </time>
     </i>
 </p>
+{{ end }}
 
 {{.Data.Body | parseMarkdown}}
+
+{{/* Tag links */}}
+{{ $username := "" }}
+{{ if .Global.ViewingUser }}{{ $username = .Global.ViewingUser.Username }}{{ end }}
+{{ $tags := jsonListToSlice .Data.Tags }}
+{{ if $tags }}
+<div class="post-tags" style="margin-top:25px;">
+    <small>Tags:
+    {{ range $tags }}
+        <a href="/u/{{ pathEscape $username }}/tag/{{ pathEscape . }}">{{ . }}</a>
+    {{ end }}
+    </small>
+</div>
+{{ end }}
 
 {{end}}
