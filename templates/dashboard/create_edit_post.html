@@ -229,6 +229,26 @@ window.addEventListener('load', function () {
     // Start monitoring after a delay
     setTimeout(startScrollMonitoring, 200);
 
+    // Page/Show on global home logic
+    const isPageCheckbox = document.getElementById('isPage');
+    const showOnHomepageCheckbox = document.getElementById('showOnHomepage');
+    const showOnHomepageLabel = showOnHomepageCheckbox.closest('label');
+
+    function toggleShowOnHomepage() {
+        if (isPageCheckbox.checked) {
+            showOnHomepageLabel.style.display = 'none';
+            showOnHomepageCheckbox.checked = false;
+        } else {
+            showOnHomepageLabel.style.display = '';
+        }
+    }
+
+    // Initial state
+    toggleShowOnHomepage();
+
+    // Listen for changes
+    isPageCheckbox.addEventListener('change', toggleShowOnHomepage);
+
     {{ if $isEditing }}
     // autosave functionality
     function triggerSave() {
