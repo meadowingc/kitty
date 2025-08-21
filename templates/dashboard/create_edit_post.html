@@ -1,13 +1,14 @@
 {{template "layout.html" .}}
 
-{{define "title"}}Manage Post{{end}}
+{{define "title"}}Manage {{if and .Data .Data.IsPage}}Page{{else}}Post{{end}}{{end}}
 
 {{define "styles"}}{{end}}
 
 {{define "content"}}
 {{$isEditing := (and .Data (or .Data.ID false))}}
+{{$isPage := (and .Data .Data.IsPage)}}
 
-<h1>{{if $isEditing}}Edit{{else}}New{{end}} Post</h1>
+<h1 id="editHeading">{{if $isEditing}}{{if $isPage}}Edit Page{{else}}Edit Post{{end}}{{else}}{{if $isPage}}New Page{{else}}New Post{{end}}{{end}}</h1>
 <div class="post-editor">
     {{ $formActionUrl := "/dashboard/post/new" }} <!-- Default URL -->
     {{ if $isEditing }}
@@ -16,9 +17,9 @@
 
     {{ if $isEditing }}
     <form action="/dashboard/post/{{.Data.ID}}/delete" method="post"
-        onsubmit="return confirm('Are you sure you want to delete this post?');">
+        onsubmit="return confirm('Are you sure you want to delete this {{if $isPage}}page{{else}}post{{end}}?');">
         {{ csrfField }}
-        <input type="submit" value="Delete Post" class="btn-cozy-secondary">
+        <input type="submit" value="Delete {{if .Data.IsPage}}Page{{else}}Post{{end}}" class="btn-cozy-secondary">
     </form>
     {{ end }}
 
@@ -26,17 +27,17 @@
         {{ csrfField }}
         <div class="post-editor-actions" style="margin:0 0 1rem; display:flex; gap:.5rem; flex-wrap:wrap;">
             <a href="/dashboard" class="btn-cozy-secondary" style="text-decoration:none;line-height: 100%;">← Back</a>
-            <input type="submit" class="btn-cozy" value="{{if $isEditing}}Update{{else}}Create{{end}} Post">
+            <input id="submitButton" type="submit" class="btn-cozy" value="{{if $isEditing}}{{if $isPage}}Update Page{{else}}Update Post{{end}}{{else}}{{if $isPage}}Create Page{{else}}Create Post{{end}}{{end}}">
             {{ if $isEditing }}
             <a href="/u/{{ pathEscape $.Global.CurrentUser.Username }}/{{ pathEscape .Data.Slug }}" target="_blank" class="btn-cozy-ghost" style="text-decoration:none;">
-                View Post
+                View {{if $isPage}}Page{{else}}Post{{end}}
             </a>
             {{end}}
         </div>
 
         <div class="meta-card" style="margin:0 0 1rem;">
             <div class="meta-section-heading">
-                <h4>Post Details</h4>
+                <h4 id="detailsHeading">{{if $isPage}}Page{{else}}Post{{end}} Details</h4>
             </div>
             <div class="post-details-columns">
                 <div class="col">
@@ -128,11 +129,12 @@
         </div>
     </form>
 </div>
-<div id="saveMessage" class="save-flash">Post saved!</div>
+<div id="saveMessage" class="save-flash">{{if $isPage}}Page{{else}}Post{{end}} saved!</div>
 {{end}}
 
 {{define "scripts"}}
 {{$isEditing := (and .Data (or .Data.ID false))}}
+{{$isPage := (and .Data .Data.IsPage)}}
 
 <script src="https://unpkg.com/overtype/dist/overtype.min.js"></script>
 <script>
@@ -260,6 +262,33 @@ window.addEventListener('load', function () {
     // Listen for changes
     isPageCheckbox.addEventListener('change', toggleShowOnHomepage);
 
+    function updateWording(){
+        const isPage = isPageCheckbox.checked || {{$isPage}};
+        const editHeading = document.getElementById('editHeading');
+        const submitBtn = document.getElementById('submitButton');
+        const detailsHeading = document.getElementById('detailsHeading');
+        const saveMsg = document.getElementById('saveMessage');
+        if(editHeading){
+            const base = {{$isEditing}} ? (isPage ? 'Edit Page' : 'Edit Post') : (isPage ? 'New Page' : 'New Post');
+            editHeading.textContent = base;
+        }
+        if(submitBtn){
+            const action = {{$isEditing}} ? (isPage ? 'Update Page' : 'Update Post') : (isPage ? 'Create Page' : 'Create Post');
+            submitBtn.value = action;
+        }
+        if(detailsHeading){
+            detailsHeading.textContent = (isPage ? 'Page' : 'Post') + ' Details';
+        }
+        if(saveMsg){
+            const txt = (isPage ? 'Page' : 'Post') + ' saved!';
+            if(saveMsg.textContent.trim() !== txt){
+                saveMsg.textContent = txt;
+            }
+        }
+    }
+    isPageCheckbox.addEventListener('change', updateWording);
+    updateWording();
+
     {{ if $isEditing }}
     // autosave functionality
     function triggerSave() {
@@ -284,7 +313,7 @@ window.addEventListener('load', function () {
                         slugError.textContent = 'This slug is already in use. Please choose a different one.';
                         slugError.style.display = 'block';
                     } else {
-                        alert('Error saving post: ' + errorMessage);
+                        alert('Error saving {{if $isPage}}page{{else}}post{{end}}: ' + errorMessage);
                     }
                 });
             }

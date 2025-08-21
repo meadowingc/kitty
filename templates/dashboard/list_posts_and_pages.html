@@ -1,6 +1,6 @@
 {{template "layout.html" .}}
 
-{{define "title"}}Post List{{end}}
+{{define "title"}}{{if .Data.IsPage}}Page List{{else}}Post List{{end}}{{end}}
 
 <!-- -------------------------------------------------------------------------------------------------------------------- -->
 
@@ -113,6 +113,6 @@
     {{end}}
 </ul>
 {{else}}
-<p style="text-align: center;">No posts found.</p>
+<p style="text-align: center;">{{if .Data.IsPage}}No pages found.{{else}}No posts found.{{end}}</p>
 {{end}}
 {{end}}

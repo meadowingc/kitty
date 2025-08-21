@@ -148,7 +148,10 @@ func initRouter() *chi.Mux {
 
 	r.Route("/api", func(r chi.Router) {
 		r.Route("/v1", func(r chi.Router) {
+			// stricter limits on api endpoints
+			r.Use(httprate.LimitByIP(10, time.Minute))
 			r.Get("/get-user-posts-messages/{userID}", func(w http.ResponseWriter, r *http.Request) {
+
 				userID := chi.URLParam(r, "userID")
 
 				var posts []database.Post
