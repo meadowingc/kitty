@@ -5,6 +5,8 @@
 {{define "content"}}
 {{ if not (and .Global.ViewingUser (isHomePageView .Global.RequestPath .Global.ViewingUser.Username .Data.IsPage)) }}
 <h1>{{.Data.Title}}</h1>
+
+{{if not .Data.IsPage}}
 <p>
     <i>
         <time datetime="{{.Data.PublishedDate | dateFmt "2006-01-02T15:04Z"}}">
@@ -12,6 +14,7 @@
         </time>
     </i>
 </p>
+{{ end }}
 {{ end }}
 
 {{.Data.Body | parseMarkdown}}

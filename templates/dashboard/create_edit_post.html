@@ -84,15 +84,26 @@
                             <style>
                                 #tagSuggestions span.tag-suggestion {
                                     cursor: pointer;
-                                    color: #c05621;
+                                    color: var(--cozy-brown-700);
                                     text-decoration: none;
-                                    border-bottom: 1px dotted #c05621;
+                                    border-bottom: 1px dotted var(--cozy-brown-500);
                                 }
                                 #tagSuggestions span.tag-suggestion:hover {
-                                    color: #9c4221;
+                                    color: var(--cozy-brown-800);
+                                    border-bottom-color: var(--cozy-brown-700);
                                 }
                                 #tagSuggestions span.tag-suggestion:not(:last-child)::after {
                                     content: ", ";
+                                }
+                                @media (prefers-color-scheme: dark) {
+                                    #tagSuggestions span.tag-suggestion {
+                                        color: var(--cozy-brown-300);
+                                        border-bottom-color: var(--cozy-brown-500);
+                                    }
+                                    #tagSuggestions span.tag-suggestion:hover {
+                                        color: var(--cozy-brown-200);
+                                        border-bottom-color: var(--cozy-brown-400);
+                                    }
                                 }
                             </style>
                             {{range .Data.TagSuggestions}}<span class="tag-suggestion" data-tag="{{.}}">{{.}}</span>{{end}}

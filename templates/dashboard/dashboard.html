@@ -2,147 +2,359 @@
 
 {{define "title"}}Dashboard{{end}}
 
+{{define "styles"}}
+<style>
+.dashboard-hero {
+  display:flex;
+  flex-direction:column;
+  gap:1rem;
+  margin:1.5em 0 0;
+}
+.dashboard-actions {
+  display:flex;
+  flex-wrap:wrap;
+  gap:.65rem;
+  align-items:center;
+}
+.dashboard-actions .btn-cozy,
+.dashboard-actions .btn-cozy-secondary,
+.dashboard-actions .btn-cozy-ghost {
+  padding:.55rem 1rem;
+  font-size:.8rem;
+}
+
+.dashboard-card {
+  padding:1.15rem 1.25rem .95rem;
+  border:1px solid var(--cozy-brown-100);
+  background:var(--cozy-warmwhite);
+  border-radius:1rem;
+  box-shadow:0 1px 4px -1px rgba(0,0,0,.06);
+}
+@media (prefers-color-scheme: dark) {
+  .dashboard-card {
+    background:var(--cozy-brown-800);
+    border-color:var(--cozy-brown-700);
+  }
+}
+
+/* Inline API helper (lightweight vs full card) */
+.api-inline {
+  font-size:.6rem;
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:.5rem .75rem;
+  margin:.35rem 0 1.1rem;
+  background:var(--cozy-brown-50);
+  border:1px dashed var(--cozy-brown-200);
+  padding:.45rem .6rem;
+  border-radius:.6rem;
+}
+.api-inline code {
+  font-family:monospace;
+  font-size:.65rem;
+  background:none;
+  padding:0;
+  letter-spacing:.03em;
+}
+.api-inline button {
+  font-size:.55rem;
+  padding:.25rem .55rem;
+  border-radius:.5rem;
+  border:1px solid var(--cozy-brown-200);
+  background:var(--cozy-brown-100);
+  cursor:pointer;
+}
+.api-inline button:hover {
+  background:var(--cozy-brown-200);
+}
+@media (prefers-color-scheme: dark) {
+  .api-inline {
+    background:var(--cozy-brown-800);
+    border-color:var(--cozy-brown-600);
+  }
+  .api-inline button {
+    background:var(--cozy-brown-800);
+    border-color:var(--cozy-brown-600);
+    color:var(--cozy-brown-100);
+  }
+  .api-inline button:hover {
+    background:var(--cozy-brown-700);
+  }
+}
+
+/* Quick links presented as subtle inline pills */
+.quick-links {
+  list-style:none;
+  margin:.1rem 0 0;
+  padding:0;
+  display:flex;
+  flex-wrap:wrap;
+  gap:.4rem .55rem;
+  font-size:.6rem;
+}
+.quick-links a {
+  text-decoration:none;
+  font-weight:500;
+  color:var(--cozy-brown-800);
+  padding:.18rem .5rem;
+  border:1px solid var(--cozy-brown-100);
+  border-radius:.5rem;
+  background:var(--cozy-warmwhite);
+  transition:background-color .15s;
+}
+.quick-links a:hover {
+  background:var(--cozy-brown-100);
+  color:var(--cozy-orange-600);
+  text-decoration:none;
+}
+@media (prefers-color-scheme: dark) {
+  .quick-links a { color:var(--cozy-brown-50); background:var(--cozy-brown-800); border-color:var(--cozy-brown-700); }
+  .quick-links a:hover { background:var(--cozy-brown-700); color:var(--cozy-orange-400); }
+}
+
+.tab-shell {
+  margin-top: 1.2rem;
+}
+.tab-shell h2 {
+  margin:0 0 .75rem;
+  font-size:1.05rem;
+  letter-spacing:.5px;
+}
+.dashboard-lists-card {
+  margin-top:.75rem;
+  padding:1.1rem 1.15rem .9rem;
+}
+
+.dashboard-content-list {
+  list-style:none;
+  margin:0;
+  padding:0;
+  display:flex;
+  flex-direction:column;
+}
+.dashboard-content-list li {
+  display:flex;
+  flex-wrap:wrap;
+  gap:.55rem .75rem;
+  align-items:baseline;
+  padding:.55rem 0;
+  border-bottom:1px dashed var(--cozy-brown-200);
+  font-size:.85rem;
+}
+.dashboard-content-list li:last-child {
+  border-bottom:none;
+}
+.dashboard-content-list time {
+  font-family:monospace;
+  font-size:.65rem;
+  letter-spacing:.05em;
+  opacity:.7;
+  min-width:80px;
+  text-transform:uppercase;
+}
+.dashboard-content-list a.item-title {
+  font-weight:600;
+  text-decoration:none;
+  color:var(--cozy-brown-800);
+}
+.dashboard-content-list a.item-title:hover {
+  text-decoration:underline;
+  color:var(--cozy-orange-600);
+}
+
+.status-chip {
+  font-size:.55rem;
+  letter-spacing:.06em;
+  font-weight:600;
+  text-transform:uppercase;
+  padding:.2rem .45rem;
+  border-radius:.5rem;
+  background:var(--cozy-brown-100);
+  border:1px solid var(--cozy-brown-200);
+  color:var(--cozy-brown-700);
+}
+.status-chip.draft {
+  background:var(--cozy-orange-500);
+  border-color:var(--cozy-orange-500);
+  color:#fff;
+}
+
+@media (prefers-color-scheme: dark) {
+  .dashboard-content-list a.item-title { color:var(--cozy-brown-50); }
+  .dashboard-content-list a.item-title:hover { color:var(--cozy-orange-400); }
+  .dashboard-content-list li { border-bottom:1px dashed var(--cozy-brown-600); }
+  .dashboard-content-list time { opacity:.55; }
+  .status-chip {
+    background:var(--cozy-brown-800);
+    border-color:var(--cozy-brown-600);
+    color:var(--cozy-brown-200);
+  }
+}
+
+.empty-note {
+  font-size:.7rem;
+  opacity:.75;
+  margin:.5rem 0 0;
+}
+</style>
+{{end}}
+
 {{define "content"}}
-<h1 class="mb-6">Dashboard</h1>
+<section class="dashboard-card dashboard-hero">
+  <div class="dashboard-actions">
+    <a href="/dashboard/post/new" class="btn-cozy">New Post / Page</a>
+    <a href="/dashboard/import" class="btn-cozy-secondary">Import</a>
+    <a href="/dashboard/settings" class="btn-cozy-secondary">Settings</a>
+    <button id="downloadPostsBtn" class="btn-cozy-secondary" type="button">Export JSON</button>
+    <a href="/u/{{ pathEscape .Global.CurrentUser.Username }}" target="_blank" class="btn-cozy-ghost" style="text-decoration:none;">Public Profile ↗</a>
+  </div>
+</section>
 
-<div class="text-sm mb-4">
-    <p>
-        Access your posts and markdown contents via API:
-        <a href="/api/v1/get-user-posts-messages/{{.Global.CurrentUser.ID}}" target="_blank" class="text-cozy-orange-600 underline">GET /api/v1/get-user-posts-messages/{{.Global.CurrentUser.ID}}</a>
-    </p>
-</div>
+<section class="dashboard-card tab-shell">
+  <h2>Content</h2>
 
-<button id="downloadPostsBtn" class="btn-cozy-secondary">Export Posts as JSON file</button>
+  <div class="api-inline" aria-label="API endpoint">
+    <strong style="font-size:.6rem; letter-spacing:.05em; text-transform:uppercase; opacity:.75;">API</strong>
+    <code>GET /api/v1/get-user-posts-messages/{{.Global.CurrentUser.ID}}</code>
+    <button id="copyApiBtn" type="button" aria-label="Copy endpoint">Copy</button>
+    <a href="/api/v1/get-user-posts-messages/{{.Global.CurrentUser.ID}}" target="_blank" class="btn-cozy-ghost" style="font-size:.55rem; text-decoration:none; padding:.25rem .55rem;">Open ↗</a>
+  </div>
 
-<ul class="list-none space-y-2 mb-6">
-    <li><a href="/u/{{ pathEscape .Global.CurrentUser.Username }}" target="_blank" class="text-cozy-orange-600 underline">See your public profile</a></li>
-    <li><a href="/dashboard/post/new" class="text-cozy-orange-600 underline">New post/page</a></li>
-    <li><a href="/dashboard/import" class="text-cozy-orange-600 underline">Import posts</a></li>
-</ul>
+  <div class="tabs" role="tablist" aria-label="Content type" aria-orientation="horizontal" style="margin-bottom:.5rem;">
+    <button type="button"
+            class="tab-btn active"
+            data-tab="posts"
+            id="tab-btn-posts"
+            role="tab"
+            aria-selected="true"
+            aria-controls="tab-posts">
+        Posts ({{len .Data.Posts}})
+    </button>
+    <button type="button"
+            class="tab-btn"
+            data-tab="pages"
+            id="tab-btn-pages"
+            role="tab"
+            aria-selected="false"
+            aria-controls="tab-pages">
+        Pages ({{len .Data.Pages}})
+    </button>
+  </div>
 
-<div class="dashboard-posts-pages">
-    <div class="tabs flex gap-2 mb-4" role="tablist" aria-label="Content type" aria-orientation="horizontal">
-        <button type="button"
-                class="tab-btn active btn-cozy-secondary"
-                data-tab="posts"
-                id="tab-btn-posts"
-                role="tab"
-                aria-selected="true"
-                aria-controls="tab-posts">
-            Posts ({{len .Data.Posts}})
-        </button>
-        <button type="button"
-                class="tab-btn btn-cozy-secondary"
-                data-tab="pages"
-                id="tab-btn-pages"
-                role="tab"
-                aria-selected="false"
-                aria-controls="tab-pages">
-            Pages ({{len .Data.Pages}})
-        </button>
-    </div>
-
-    <div id="tab-posts" class="tab-panel" role="tabpanel" aria-labelledby="tab-btn-posts">
-        {{if .Data.Posts}}
-        <ul class="post-list space-y-2">
-            {{range .Data.Posts}}
-            <li class="flex gap-2 items-baseline border-b border-gray-200 py-2">
-                <span style="font-family:monospace; font-size:.75rem; opacity:.7;">
-                    {{.PublishedDate | dateFmt "2006-01-02"}}
-                </span>
-                <a href="/dashboard/post/{{.ID}}" class="underline">
-                    {{.Title}}
-                </a>
-                {{if not .Published}}<small class="opacity-70">(Draft)</small>{{end}}
-            </li>
-            {{end}}
-        </ul>
-        {{else}}
-        <p class="text-sm opacity-70">No posts yet.</p>
+  <div id="tab-posts" class="tab-panel dashboard-lists-card" role="tabpanel" aria-labelledby="tab-btn-posts">
+    {{if .Data.Posts}}
+      <ul class="dashboard-content-list">
+        {{range .Data.Posts}}
+        <li>
+          <time datetime="{{.PublishedDate | dateFmt "2006-01-02"}}">{{.PublishedDate | dateFmt "Jan 02, 2006"}}</time>
+          <span style="flex:1 1 auto; min-width:180px;">
+            <a href="/dashboard/post/{{.ID}}" class="item-title">{{.Title}}</a>
+          </span>
+          {{if not .Published}}<span class="status-chip draft">Draft</span>{{end}}
+        </li>
         {{end}}
-    </div>
+      </ul>
+    {{else}}
+      <p class="empty-note">No posts yet.</p>
+    {{end}}
+  </div>
 
-    <div id="tab-pages" class="tab-panel" style="display:none;" role="tabpanel" aria-labelledby="tab-btn-pages" aria-hidden="true">
-        {{if .Data.Pages}}
-        <ul class="post-list space-y-2">
-            {{range .Data.Pages}}
-            <li class="flex gap-2 items-baseline border-b border-gray-200 py-2">
-                <span style="font-family:monospace; font-size:.75rem; opacity:.7;">
-                    {{.PublishedDate | dateFmt "2006-01-02"}}
-                </span>
-                <a href="/dashboard/post/{{.ID}}" class="underline">
-                    {{.Title}}
-                </a>
-                <small class="opacity-70">(Page{{if not .Published}}, Draft{{end}})</small>
-            </li>
-            {{end}}
-        </ul>
-        {{else}}
-        <p class="text-sm opacity-70">No pages yet.</p>
+  <div id="tab-pages" class="tab-panel dashboard-lists-card" style="display:none;" role="tabpanel" aria-labelledby="tab-btn-pages" aria-hidden="true">
+    {{if .Data.Pages}}
+      <ul class="dashboard-content-list">
+        {{range .Data.Pages}}
+        <li>
+          <time datetime="{{.PublishedDate | dateFmt "2006-01-02"}}">{{.PublishedDate | dateFmt "Jan 02, 2006"}}</time>
+          <span style="flex:1 1 auto; min-width:180px;">
+            <a href="/dashboard/post/{{.ID}}" class="item-title">{{.Title}}</a>
+          </span>
+          <span class="status-chip {{if not .Published}}draft{{end}}">Page{{if not .Published}} • Draft{{end}}</span>
+        </li>
         {{end}}
-    </div>
-</div>
+      </ul>
+    {{else}}
+      <p class="empty-note">No pages yet.</p>
+    {{end}}
+  </div>
+</section>
 {{end}}
 
 {{define "scripts"}}
 <script>
-    // Export button
-    document.getElementById('downloadPostsBtn').addEventListener('click', function () {
-        const userId = "{{.Global.CurrentUser.ID}}";
-        const url = `/api/v1/get-user-posts-messages/${userId}`;
+  // Export button
+  document.getElementById('downloadPostsBtn').addEventListener('click', function () {
+      const userId = "{{.Global.CurrentUser.ID}}";
+      const url = `/api/v1/get-user-posts-messages/${userId}`;
+      fetch(url)
+          .then(r => r.json())
+          .then(data => {
+              const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+              const objUrl = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = objUrl;
+              a.download = `kitty_user_posts_${userId}.json`;
+              document.body.appendChild(a);
+              a.click();
+              a.remove();
+              URL.revokeObjectURL(objUrl);
+          })
+          .catch(err => console.error('Export error:', err));
+  });
 
-        fetch(url)
-            .then(response => response.json())
-            .then(data => {
-                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-                const urlObj = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = urlObj;
-                a.download = `kitty_user_posts_${userId}.json`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(urlObj);
-            })
-            .catch(error => console.error('Error fetching posts:', error));
+  // Copy API endpoint
+  const copyBtn = document.getElementById('copyApiBtn');
+  if (copyBtn) {
+    copyBtn.addEventListener('click', () => {
+      const text = `/api/v1/get-user-posts-messages/{{.Global.CurrentUser.ID}}`;
+      navigator.clipboard.writeText(text).then(() => {
+        copyBtn.textContent = 'Copied!';
+        setTimeout(() => copyBtn.textContent = 'Copy', 1600);
+      });
     });
+  }
 
-    // Tabs with ARIA + keyboard navigation
-    const tabButtons = Array.from(document.querySelectorAll('.tab-btn'));
-    function setActiveTab(target) {
-        tabButtons.forEach(b => {
-            const isActive = b.getAttribute('data-tab') === target;
-            b.classList.toggle('active', isActive);
-            b.setAttribute('aria-selected', isActive ? 'true' : 'false');
-            if (isActive) {
-                b.removeAttribute('tabindex');
-                b.focus();
-            } else {
-                b.setAttribute('tabindex', '-1');
-            }
-        });
-        document.querySelectorAll('.tab-panel').forEach(p => {
-            const isPanel = p.id === 'tab-' + target;
-            p.style.display = isPanel ? '' : 'none';
-            p.setAttribute('aria-hidden', isPanel ? 'false' : 'true');
-        });
-    }
-    tabButtons.forEach(btn => {
-        btn.addEventListener('click', () => {
-            setActiveTab(btn.getAttribute('data-tab'));
-        });
-    });
-    // Arrow key navigation
-    document.querySelector('[role="tablist"]').addEventListener('keydown', e => {
-        if (!['ArrowLeft','ArrowRight','Home','End'].includes(e.key)) return;
-        e.preventDefault();
-        const currentIndex = tabButtons.findIndex(b => b.classList.contains('active'));
-        let nextIndex = currentIndex;
-        if (e.key === 'ArrowRight') nextIndex = (currentIndex + 1) % tabButtons.length;
-        if (e.key === 'ArrowLeft') nextIndex = (currentIndex - 1 + tabButtons.length) % tabButtons.length;
-        if (e.key === 'Home') nextIndex = 0;
-        if (e.key === 'End') nextIndex = tabButtons.length - 1;
-        setActiveTab(tabButtons[nextIndex].getAttribute('data-tab'));
-    });
+  // Tabs
+  const tabButtons = Array.from(document.querySelectorAll('.tab-btn'));
+  function setActiveTab(target) {
+      tabButtons.forEach(b => {
+          const isActive = b.getAttribute('data-tab') === target;
+          b.classList.toggle('active', isActive);
+          b.setAttribute('aria-selected', isActive ? 'true' : 'false');
+          if (isActive) {
+              b.removeAttribute('tabindex');
+              b.focus();
+          } else {
+              b.setAttribute('tabindex', '-1');
+          }
+      });
+      document.querySelectorAll('.tab-panel').forEach(p => {
+          const isPanel = p.id === 'tab-' + target;
+          p.style.display = isPanel ? '' : 'none';
+          p.setAttribute('aria-hidden', isPanel ? 'false' : 'true');
+      });
+  }
+  tabButtons.forEach(btn => {
+      btn.addEventListener('click', () => setActiveTab(btn.getAttribute('data-tab')));
+  });
+  document.querySelector('[role="tablist"]').addEventListener('keydown', e => {
+      if (!['ArrowLeft','ArrowRight','Home','End'].includes(e.key)) return;
+      e.preventDefault();
+      const currentIndex = tabButtons.findIndex(b => b.classList.contains('active'));
+      let nextIndex = currentIndex;
+      if (e.key === 'ArrowRight') nextIndex = (currentIndex + 1) % tabButtons.length;
+      if (e.key === 'ArrowLeft') nextIndex = (currentIndex - 1 + tabButtons.length) % tabButtons.length;
+      if (e.key === 'Home') nextIndex = 0;
+      if (e.key === 'End') nextIndex = tabButtons.length - 1;
+      setActiveTab(tabButtons[nextIndex].getAttribute('data-tab'));
+  });
 </script>
 {{end}}
+</content>
+<task_progress>
+- [x] Analyze feedback
+- [x] Plan single-column refactor
+- [x] Implement consolidated layout
+- [x] Clean extraneous template closings
+- [ ] Final review & confirmation
+</task_progress>

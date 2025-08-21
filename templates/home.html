@@ -2,45 +2,137 @@
 
 {{define "title"}}Home{{end}}
 
-{{define "content"}}
-<div class="text-center mb-6">
-    <h2 class="text-lg font-semibold text-cozy-orange-600">Welcome to Kitty! 😺</h2>
-    <p class="text-sm text-cozy-brown-700">
-        A cozy, simple content management system for writers who want to focus on their words.
-    </p>
-</div>
-
-<div class="text-sm text-cozy-brown-600">
-    <p>
-        By using <em>Kitty</em>, you agree to our 
-        <a href="/terms-and-conditions" class="text-cozy-orange-600 underline">Terms and Conditions</a>.
-    </p>
-    <p>
-        This platform is a development project and may be unreliable at times. For a more robust solution, consider other CMS services.
-    </p>
-</div>
-
-{{if .Data.Posts}}
-<hr class="my-8">
-<section>
-    <h2 class="text-md font-semibold mb-3">Recent Posts</h2>
-    <ul class="post-list" style="list-style:none; padding:0;">
-        {{range .Data.Posts}}
-        <li style="padding:6px 0; border-bottom:1px solid #eceff4;">
-            <time datetime="{{.PublishedDate | dateFmt " 2006-01-02"}}" style="font-family:monospace; font-size:14px;">
-                {{.PublishedDate | dateFmt "Jan 02, 2006"}}
-            </time>
-            &nbsp;
-            <a href="/u/{{ pathEscape .Username }}/{{ pathEscape .Slug }}">{{.Title}}</a>
-            <small style="margin-left:8px; opacity:.7;">
-                (<a href="/u/{{ pathEscape .Username }}">{{.Username}}</a>)
-            </small>
-        </li>
-        {{end}}
-    </ul>
-</section>
-{{else}}
-<hr class="my-8">
-<p class="text-sm mt-4">No recent posts yet.</p>
+{{define "styles"}}
+<style>
+.home-hero {
+  display:flex;
+  flex-direction:column;
+  gap:1rem;
+}
+.home-actions {
+  display:flex;
+  flex-wrap:wrap;
+  gap:.75rem;
+  align-items:center;
+  margin-top:.25rem;
+}
+.recent-posts-card {
+  padding:1.25rem 1.25rem .75rem;
+  border:1px solid var(--cozy-brown-100);
+  background:var(--cozy-warmwhite);
+  border-radius:1rem;
+  box-shadow:0 1px 4px -1px rgba(0,0,0,.06);
+}
+@media (prefers-color-scheme: dark) {
+  .recent-posts-card {
+    background:var(--cozy-brown-800);
+    border-color:var(--cozy-brown-700);
+  }
+}
+.recent-posts-list {
+  list-style:none;
+  margin:0;
+  padding:0;
+  display:flex;
+  flex-direction:column;
+}
+.recent-posts-list li {
+  display:flex;
+  flex-wrap:wrap;
+  gap:.5rem .75rem;
+  align-items:baseline;
+  padding:.55rem 0;
+  border-bottom:1px dashed var(--cozy-brown-200);
+  font-size:.9rem;
+}
+.recent-posts-list li:last-child {
+  border-bottom:none;
+}
+.recent-posts-list time {
+  font-family:monospace;
+  font-size:.7rem;
+  letter-spacing:.05em;
+  opacity:.75;
+  min-width:88px;
+  text-transform:uppercase;
+}
+.post-title-link {
+  font-weight:600;
+  text-decoration:none;
+  color:var(--cozy-brown-800);
+}
+.post-title-link:hover {
+  color:var(--cozy-orange-600);
+  text-decoration:underline;
+}
+@media (prefers-color-scheme: dark) {
+  .post-title-link { color:var(--cozy-brown-50); }
+  .post-title-link:hover { color:var(--cozy-orange-400); }
+  .recent-posts-list li { border-bottom:1px dashed var(--cozy-brown-600); }
+  .recent-posts-list time { opacity:.6; }
+}
+.hero-footnote {
+  font-size:.65rem;
+  line-height:1.4;
+  opacity:.7;
+  margin-top:.25rem;
+}
+.empty-state {
+  font-size:.8rem;
+  opacity:.8;
+  margin:.75rem 0 0;
+}
+</style>
 {{end}}
+
+{{define "content"}}
+<section class="card-cozy home-hero" style="margin:1.5em 0 2rem;">
+  <div>
+    <h2 style="margin:.15rem 0 .4rem; font-size:1.35rem;">Welcome to <span style="color:var(--cozy-orange-600);">Kitty</span> 😺</h2>
+    <p style="margin:0; font-size:.95rem; line-height:1.55;">
+      A cozy, minimal content platform focused on helping you write & publish without fuss.
+    </p>
+  </div>
+
+  <div class="home-actions">
+    {{if .Global.CurrentUser}}
+      <a class="btn-cozy" href="/dashboard">Go to Dashboard</a>
+      <a class="btn-cozy-secondary" href="/dashboard/post/new">New Post</a>
+    {{else}}
+      <a class="btn-cozy" href="/signup">Create an Account</a>
+      <a class="btn-cozy-secondary" href="/signin">Sign In</a>
+    {{end}}
+  </div>
+
+  <div class="hero-footnote">
+    By using Kitty you agree to our
+    <a href="/terms-and-conditions">Terms and Conditions</a>.
+    This is an evolving project; things may change or break occasionally.
+  </div>
+</section>
+
+<section class="recent-posts-card">
+  <div style="display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap;">
+    <h3 style="margin:.25rem 0 .75rem; font-size:1.05rem; letter-spacing:.5px;">Recent Posts</h3>
+    {{if .Global.CurrentUser}}
+      <a href="/dashboard/post/new" class="btn-cozy-ghost" style="text-decoration:none;">+ Write</a>
+    {{end}}
+  </div>
+
+  {{if .Data.Posts}}
+    <ul class="recent-posts-list">
+      {{range .Data.Posts}}
+      <li>
+        <time datetime="{{.PublishedDate | dateFmt "2006-01-02"}}">{{.PublishedDate | dateFmt "Jan 02, 2006"}}</time>
+        <span style="flex:1 1 auto; min-width:200px;">
+          <a class="post-title-link" href="/u/{{ pathEscape .Username }}/{{ pathEscape .Slug }}">{{.Title}}</a>
+        </span>
+        <small style="opacity:.6;">by <a href="/u/{{ pathEscape .Username }}">{{.Username}}</a></small>
+      </li>
+      {{end}}
+    </ul>
+  {{else}}
+    <p class="empty-state">No posts have been published yet. {{if .Global.CurrentUser}}Why not start by writing your first one?{{end}}</p>
+  {{end}}
+</section>
 {{end}}

@@ -131,8 +131,7 @@ header {
 
 main {
   line-height: 1.6;
-  border-bottom: 1px dotted var(--heading-color);
-  padding-bottom: 1.2em;
+  padding-bottom: 1.5em;
 }
 
 em,
@@ -326,9 +325,6 @@ footer {
 }
 .gap-6 {
   gap: 1.5rem;
-}
-.mb-8 {
-  margin-bottom: 2rem;
 }
 .mb-6 {
   margin-bottom: 1.5rem;
@@ -669,6 +665,7 @@ footer {
   border:1px solid var(--cozy-brown-300);
   color:var(--cozy-brown-800);
   transition:background-color .2s, color .2s, box-shadow .2s;
+  flex-grow: 1;
 }
 /* Square inner top corners so tabs join cleanly */
 .tabs .tab-btn:first-child {
