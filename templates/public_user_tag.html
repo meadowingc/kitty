@@ -2,22 +2,128 @@
 
 {{define "title"}}Tag: {{.Data.Tag}}{{end}}
 
-{{define "content"}}
-<h1>Tag: {{.Data.Tag}}</h1>
-<p><a href="/u/{{ pathEscape .Data.Username }}">← All posts</a></p>
+{{define "styles"}}
+<style>
+/* Adopt dashboard card + list aesthetic (scoped here) */
+.dashboard-card {
+  padding:1.15rem 1.25rem .95rem;
+  border:1px solid var(--cozy-brown-100);
+  background:var(--cozy-warmwhite);
+  border-radius:1rem;
+  box-shadow:0 1px 4px -1px rgba(0,0,0,.06);
+  margin:0 0 1rem;
+}
+@media (prefers-color-scheme: dark) {
+  .dashboard-card {
+    background:var(--cozy-brown-800);
+    border-color:var(--cozy-brown-700);
+  }
+}
 
-{{if .Data.Posts}}
-<ul class="post-list" style="list-style:none; padding:0;">
-    {{range .Data.Posts}}
-    <li style="display:flex; gap:12px; padding:8px 0; border-bottom:1px solid #eceff4;">
-        <span style="flex:0 0 130px; font-family:monospace; font-size:.85rem; opacity:.7;">
-            <time datetime="{{.PublishedDate | dateFmt "2006-01-02"}}">{{.PublishedDate | dateFmt "Jan 02, 2006"}}</time>
-        </span>
-        <a href="/u/{{ pathEscape $.Data.Username }}/{{ pathEscape .Slug }}">{{.Title}}</a>
-    </li>
-    {{end}}
-</ul>
-{{else}}
-<p>No posts found for this tag.</p>
+.tag-hero {
+  display:flex;
+  flex-direction:column;
+  gap:.4rem;
+  margin-top:1.25rem;
+}
+
+.tag-hero h1 {
+  font-size:1.15rem;
+  margin:0;
+  letter-spacing:.5px;
+}
+
+.tag-back-link {
+  font-size:.7rem;
+  text-decoration:none;
+  color:var(--cozy-brown-600);
+}
+.tag-back-link:hover {
+  text-decoration:underline;
+  color:var(--cozy-orange-600);
+}
+@media (prefers-color-scheme: dark) {
+  .tag-back-link { color:var(--cozy-brown-300); }
+  .tag-back-link:hover { color:var(--cozy-orange-400); }
+}
+
+.tag-content-card {
+  padding:1.1rem 1.15rem .9rem;
+}
+
+.dashboard-content-list {
+  list-style:none;
+  margin:0;
+  padding:0;
+  display:flex;
+  flex-direction:column;
+}
+.dashboard-content-list li {
+  display:flex;
+  flex-wrap:wrap;
+  gap:.55rem .75rem;
+  align-items:baseline;
+  padding:.55rem 0;
+  border-bottom:1px dashed var(--cozy-brown-200);
+  font-size:.85rem;
+}
+.dashboard-content-list li:last-child {
+  border-bottom:none;
+}
+.dashboard-content-list time {
+  font-family:monospace;
+  font-size:.65rem;
+  letter-spacing:.05em;
+  opacity:.7;
+  min-width:80px;
+  text-transform:uppercase;
+}
+.dashboard-content-list a.item-title {
+  font-weight:600;
+  text-decoration:none;
+  color:var(--cozy-brown-800);
+}
+.dashboard-content-list a.item-title:hover {
+  text-decoration:underline;
+  color:var(--cozy-orange-600);
+}
+
+@media (prefers-color-scheme: dark) {
+  .dashboard-content-list a.item-title { color:var(--cozy-brown-50); }
+  .dashboard-content-list a.item-title:hover { color:var(--cozy-orange-400); }
+  .dashboard-content-list li { border-bottom:1px dashed var(--cozy-brown-600); }
+  .dashboard-content-list time { opacity:.55; }
+}
+
+.empty-note {
+  font-size:.7rem;
+  opacity:.75;
+  margin:.5rem 0 0;
+  letter-spacing:.5px;
+}
+</style>
 {{end}}
+
+{{define "content"}}
+<section class="dashboard-card tag-hero">
+  <h1>Tag: {{.Data.Tag}}</h1>
+  <a href="/u/{{ pathEscape .Data.Username }}" class="tag-back-link">← All posts</a>
+</section>
+
+<section class="dashboard-card tag-content-card">
+  {{if .Data.Posts}}
+    <ul class="dashboard-content-list">
+      {{range .Data.Posts}}
+      <li>
+        <time datetime="{{.PublishedDate | dateFmt "2006-01-02"}}">{{.PublishedDate | dateFmt "Jan 02, 2006"}}</time>
+        <span style="flex:1 1 auto; min-width:180px;">
+          <a class="item-title" href="/u/{{ pathEscape $.Data.Username }}/{{ pathEscape .Slug }}">{{.Title}}</a>
+        </span>
+      </li>
+      {{end}}
+    </ul>
+  {{else}}
+    <p class="empty-note">No posts found for this tag.</p>
+  {{end}}
+</section>
 {{end}}

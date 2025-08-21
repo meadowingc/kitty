@@ -1,6 +1,8 @@
 package database
 
 import (
+	"net/url"
+	"strings"
 	"time"
 
 	"gorm.io/datatypes"
@@ -33,4 +35,12 @@ type AdminUser struct {
 	HeaderMarkdown string `gorm:"type:text"`
 	BlogTitle      string
 	Emoji          string
+}
+
+func (u *AdminUser) BeforeCreate(tx *gorm.DB) (err error) {
+	if strings.TrimSpace(u.HeaderMarkdown) == "" && strings.TrimSpace(u.Username) != "" {
+		esc := url.PathEscape(u.Username)
+		u.HeaderMarkdown = "[Home](/u/" + esc + ") | [Archive](/u/" + esc + "/archive) | [RSS](/u/" + esc + "/feed.xml)\n\n---"
+	}
+	return nil
 }

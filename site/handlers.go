@@ -628,23 +628,7 @@ func PublicViewUserByUsername(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// list recent published posts
-	var posts []database.Post
-	pr := database.GetDB().Where("admin_user_id = ? AND published = ?", user.ID, true).Order("published_date DESC").Find(&posts)
-	if pr.Error != nil {
-		http.Error(w, "Error fetching posts", http.StatusInternalServerError)
-		return
-	}
-
-	type userListData struct {
-		Username string
-		Posts    []database.Post
-	}
-
-	RenderTemplate(w, r, "public_view_user", userListData{
-		Username: user.Username,
-		Posts:    posts,
-	})
+	PublicViewUserArchive(w, r)
 }
 
 // Dashboard settings: blog title, header markdown, homepage page selection
