@@ -49,6 +49,44 @@
     background:var(--cozy-brown-700);
   }
 }
+ /* Danger Zone styles */
+ .danger-zone-card {
+   margin:2rem 0 1.5rem;
+   padding:1.1rem 1.25rem 1.25rem;
+   border:1px solid #f4c2c2;
+   background:#fff5f7;
+   border-radius:1rem;
+   box-shadow:0 1px 4px -1px rgba(0,0,0,0.05);
+ }
+ .danger-zone-card h4 {
+   margin:0;
+   font-size:1rem;
+   font-weight:600;
+   letter-spacing:.5px;
+   color:#d64a5b;
+ }
+ .danger-zone-card p {
+   margin:.4rem 0 1rem;
+ }
+ .danger-zone-card .btn-danger {
+   background:#d64a5b;
+ }
+ .danger-zone-card .btn-danger:hover {
+   background:#bf3e4d;
+ }
+ .danger-zone-card .btn-danger[disabled] {
+   opacity:.55;
+   cursor:not-allowed;
+ }
+ @media (prefers-color-scheme: dark) {
+   .danger-zone-card {
+     background:#4a3d32;
+     border-color:#8b5a5f;
+   }
+   .danger-zone-card h4 {
+     color:#ff8da1;
+   }
+ }
 </style>
 {{end}}
 
@@ -183,6 +221,33 @@
             </div>
         </div>
     </form>
+
+    <div class="danger-zone-card">
+        <div class="meta-section-heading">
+            <h4>Danger Zone</h4>
+        </div>
+        <p class="form-hint" style="font-size:.6rem; max-width:560px;">
+            Permanently delete your account and all posts/pages. This cannot be undone. Previously exported data you saved locally is unaffected.
+        </p>
+        <form method="post" action="/dashboard/delete-account" style="margin:0; display:flex; flex-direction:column; gap:.6rem; max-width:460px;">
+            {{ csrfField }}
+            <label for="deleteConfirmInput" class="form-label-sm">Type your username to confirm deletion</label>
+            <input id="deleteConfirmInput" name="confirm" type="text"
+                   placeholder="{{ .Data.User.Username }}" autocomplete="off"
+                   class="input-cozy-sm" style="max-width:320px;">
+            <div style="display:flex; gap:.6rem; align-items:center;">
+              <button id="deleteAccountBtn" type="submit"
+                      class="btn-cozy btn-danger"
+                      disabled
+                      style="flex:0 0 auto;">
+                  Delete Account Permanently
+              </button>
+            </div>
+            <div class="form-hint" style="font-size:.55rem;">
+                Irreversible: all posts/pages removed immediately.
+            </div>
+        </form>
+    </div>
 </div>
 {{end}}
 
@@ -218,6 +283,41 @@
         setTimeout(() => copyBtn.textContent = 'Copy', 1600);
       });
     });
+  }
+  // Danger Zone delete account enable/disable + final confirm
+  const deleteInput = document.getElementById('deleteConfirmInput');
+  const deleteBtn = document.getElementById('deleteAccountBtn');
+  if (deleteInput && deleteBtn) {
+    const expected = "{{ .Data.User.Username }}";
+    const syncDeleteState = () => {
+      if (deleteInput.value.trim() === expected) {
+        deleteBtn.disabled = false;
+        deleteBtn.style.opacity = '1';
+        deleteBtn.style.cursor = 'pointer';
+      } else {
+        deleteBtn.disabled = true;
+        deleteBtn.style.opacity = '.6';
+        deleteBtn.style.cursor = 'not-allowed';
+      }
+    };
+    deleteInput.addEventListener('input', syncDeleteState);
+    syncDeleteState();
+
+    const deleteForm = deleteBtn.closest('form');
+    if (deleteForm) {
+      deleteForm.addEventListener('submit', (e) => {
+        if (deleteBtn.disabled) {
+          e.preventDefault();
+          return;
+        }
+        const confirmed = window.confirm(
+          "This will permanently delete your account and ALL posts/pages. This cannot be undone.\n\nAre you absolutely sure you want to proceed?"
+        );
+        if (!confirmed) {
+          e.preventDefault();
+        }
+      });
+    }
   }
 </script>
 {{end}}

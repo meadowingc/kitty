@@ -851,6 +851,31 @@ func PublicViewUserArchive(w http.ResponseWriter, r *http.Request) {
 	RenderTemplate(w, r, "public_user_archive", data)
 }
 
+func UserDeleteAccount(w http.ResponseWriter, r *http.Request) {
+	user := getSignedInUserOrFail(r)
+	if r.Method != "POST" {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	confirm := strings.TrimSpace(r.FormValue("confirm"))
+	if confirm != user.Username {
+		http.Error(w, "Confirmation text does not match your username", http.StatusBadRequest)
+		return
+	}
+	if err := database.DeleteUserAndPosts(user.ID); err != nil {
+		http.Error(w, "Error deleting account: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	// clear auth cookie
+	http.SetCookie(w, &http.Cookie{
+		Name:   string(AuthenticatedUserTokenCookieName),
+		Value:  "",
+		Path:   "/",
+		MaxAge: -1,
+	})
+	http.Redirect(w, r, "/signin", http.StatusSeeOther)
+}
+
 // helper to escape basic XML entities for RSS feed generation
 func templateEscapeXML(s string) string {
 	var b strings.Builder

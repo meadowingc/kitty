@@ -132,6 +132,7 @@ func initRouter() *chi.Mux {
 		r.HandleFunc("/post/{postID}", site.UpdatePost)
 		r.HandleFunc("/post/{postID}/delete", site.DeletePost)
 		r.HandleFunc("/settings", site.UserSettings)
+		r.HandleFunc("/delete-account", site.UserDeleteAccount)
 	})
 
 	r.Get("/u/{username}/feed.xml", site.PublicUserRSSFeed)
