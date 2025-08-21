@@ -75,6 +75,9 @@
   font-size:1.05rem;
   letter-spacing:.5px;
 }
+.tab-content {
+  padding: 0 1.25rem .95rem;
+}
 .dashboard-lists-card {
   margin-top:.75rem;
   padding:1.1rem 1.15rem .9rem;
@@ -163,9 +166,7 @@
   </div>
 </section>
 
-<section class="dashboard-card tab-shell">
-  <h2>Content</h2>
-
+<section class="dashboard-card tab-shell" style="padding: 0;">
   <div class="tabs" role="tablist" aria-label="Content type" aria-orientation="horizontal" style="margin-bottom:.5rem;">
     <button type="button"
             class="tab-btn active"
@@ -187,40 +188,42 @@
     </button>
   </div>
 
-  <div id="tab-posts" class="tab-panel dashboard-lists-card" role="tabpanel" aria-labelledby="tab-btn-posts">
-    {{if .Data.Posts}}
-      <ul class="dashboard-content-list">
-        {{range .Data.Posts}}
-        <li>
-          <time datetime="{{.PublishedDate | dateFmt "2006-01-02"}}">{{.PublishedDate | dateFmt "Jan 02, 2006"}}</time>
-          <span style="flex:1 1 auto; min-width:180px;">
-            <a href="/dashboard/post/{{.ID}}" class="item-title">{{.Title}}</a>
-          </span>
-          {{if not .Published}}<span class="status-chip draft">Draft</span>{{end}}
-        </li>
-        {{end}}
-      </ul>
-    {{else}}
-      <p class="empty-note">No posts yet.</p>
-    {{end}}
-  </div>
+  <div class="tab-content">
+    <div id="tab-posts" class="tab-panel dashboard-lists-card" role="tabpanel" aria-labelledby="tab-btn-posts">
+      {{if .Data.Posts}}
+        <ul class="dashboard-content-list">
+          {{range .Data.Posts}}
+          <li>
+            <time datetime="{{.PublishedDate | dateFmt "2006-01-02"}}">{{.PublishedDate | dateFmt "Jan 02, 2006"}}</time>
+            <span style="flex:1 1 auto; min-width:180px;">
+              <a href="/dashboard/post/{{.ID}}" class="item-title">{{.Title}}</a>
+            </span>
+            {{if not .Published}}<span class="status-chip draft">Draft</span>{{end}}
+          </li>
+          {{end}}
+        </ul>
+      {{else}}
+        <p class="empty-note">No posts yet.</p>
+      {{end}}
+    </div>
 
-  <div id="tab-pages" class="tab-panel dashboard-lists-card" style="display:none;" role="tabpanel" aria-labelledby="tab-btn-pages" aria-hidden="true">
-    {{if .Data.Pages}}
-      <ul class="dashboard-content-list">
-        {{range .Data.Pages}}
-        <li>
-          <time datetime="{{.PublishedDate | dateFmt "2006-01-02"}}">{{.PublishedDate | dateFmt "Jan 02, 2006"}}</time>
-          <span style="flex:1 1 auto; min-width:180px;">
-            <a href="/dashboard/post/{{.ID}}" class="item-title">{{.Title}}</a>
-          </span>
-          <span class="status-chip {{if not .Published}}draft{{end}}">Page{{if not .Published}} • Draft{{end}}</span>
-        </li>
-        {{end}}
-      </ul>
-    {{else}}
-      <p class="empty-note">No pages yet.</p>
-    {{end}}
+    <div id="tab-pages" class="tab-panel dashboard-lists-card" style="display:none;" role="tabpanel" aria-labelledby="tab-btn-pages" aria-hidden="true">
+      {{if .Data.Pages}}
+        <ul class="dashboard-content-list">
+          {{range .Data.Pages}}
+          <li>
+            <time datetime="{{.PublishedDate | dateFmt "2006-01-02"}}">{{.PublishedDate | dateFmt "Jan 02, 2006"}}</time>
+            <span style="flex:1 1 auto; min-width:180px;">
+              <a href="/dashboard/post/{{.ID}}" class="item-title">{{.Title}}</a>
+            </span>
+            <span class="status-chip {{if not .Published}}draft{{end}}">Page{{if not .Published}} • Draft{{end}}</span>
+          </li>
+          {{end}}
+        </ul>
+      {{else}}
+        <p class="empty-note">No pages yet.</p>
+      {{end}}
+    </div>
   </div>
 </section>
 {{end}}
