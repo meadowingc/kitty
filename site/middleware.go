@@ -2,6 +2,7 @@ package site
 
 import (
 	"context"
+	"kitty/constants"
 	"kitty/database"
 	"net/http"
 	"strings"
@@ -42,10 +43,13 @@ func TryPutUserInContextMiddleware(next http.Handler) http.Handler {
 		if result.Error != nil {
 			// Clear the invalid cookie
 			http.SetCookie(w, &http.Cookie{
-				Name:   string(AuthenticatedUserTokenCookieName),
-				Value:  "",
-				Path:   "/",
-				MaxAge: -1,
+				Name:     string(AuthenticatedUserTokenCookieName),
+				Value:    "",
+				Path:     "/",
+				MaxAge:   -1,
+				HttpOnly: true,
+				Secure:   !constants.DEBUG_MODE,
+				SameSite: http.SameSiteLaxMode,
 			})
 			next.ServeHTTP(w, r)
 			return

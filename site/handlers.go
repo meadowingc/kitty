@@ -58,9 +58,12 @@ func UserSignIn(w http.ResponseWriter, r *http.Request) {
 		database.GetDB().Save(&admin)
 
 		http.SetCookie(w, &http.Cookie{
-			Name:  string(AuthenticatedUserTokenCookieName),
-			Value: token,
-			Path:  "/",
+			Name:     string(AuthenticatedUserTokenCookieName),
+			Value:    token,
+			Path:     "/",
+			HttpOnly: true,
+			Secure:   !constants.DEBUG_MODE,
+			SameSite: http.SameSiteLaxMode,
 		})
 
 		http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
@@ -104,9 +107,12 @@ func UserSignUp(w http.ResponseWriter, r *http.Request) {
 		}
 
 		http.SetCookie(w, &http.Cookie{
-			Name:  string(AuthenticatedUserTokenCookieName),
-			Value: token,
-			Path:  "/",
+			Name:     string(AuthenticatedUserTokenCookieName),
+			Value:    token,
+			Path:     "/",
+			HttpOnly: true,
+			Secure:   !constants.DEBUG_MODE,
+			SameSite: http.SameSiteLaxMode,
 		})
 
 		// Redirect to the admin sign-in page after successful sign-up
@@ -116,10 +122,13 @@ func UserSignUp(w http.ResponseWriter, r *http.Request) {
 
 func UserLogout(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, &http.Cookie{
-		Name:   string(AuthenticatedUserTokenCookieName),
-		Value:  "",
-		Path:   "/",
-		MaxAge: -1,
+		Name:     string(AuthenticatedUserTokenCookieName),
+		Value:    "",
+		Path:     "/",
+		MaxAge:   -1,
+		HttpOnly: true,
+		Secure:   !constants.DEBUG_MODE,
+		SameSite: http.SameSiteLaxMode,
 	})
 	http.Redirect(w, r, "/signin", http.StatusSeeOther)
 }
@@ -852,10 +861,13 @@ func UserDeleteAccount(w http.ResponseWriter, r *http.Request) {
 	}
 	// clear auth cookie
 	http.SetCookie(w, &http.Cookie{
-		Name:   string(AuthenticatedUserTokenCookieName),
-		Value:  "",
-		Path:   "/",
-		MaxAge: -1,
+		Name:     string(AuthenticatedUserTokenCookieName),
+		Value:    "",
+		Path:     "/",
+		MaxAge:   -1,
+		HttpOnly: true,
+		Secure:   !constants.DEBUG_MODE,
+		SameSite: http.SameSiteLaxMode,
 	})
 	http.Redirect(w, r, "/signin", http.StatusSeeOther)
 }
