@@ -56,10 +56,10 @@ func RenderTemplate(w http.ResponseWriter, r *http.Request, templateName string,
 	var headerHTML template.HTML
 	if viewingUser != nil && strings.TrimSpace(viewingUser.HeaderMarkdown) != "" {
 		headerSrc := applyShortcodesToContent(viewingUser.HeaderMarkdown, viewingUser)
-		extensions := parser.CommonExtensions | parser.AutoHeadingIDs
+		extensions := parser.CommonExtensions | parser.AutoHeadingIDs | parser.Footnotes | parser.Autolink
 		p := parser.NewWithExtensions(extensions)
 		doc := p.Parse([]byte(headerSrc))
-		htmlFlags := html.CommonFlags | html.HrefTargetBlank
+		htmlFlags := html.CommonFlags | html.HrefTargetBlank | html.FootnoteReturnLinks
 		opts := html.RendererOptions{Flags: htmlFlags}
 		renderer := html.NewRenderer(opts)
 		rendered := markdown.Render(doc, renderer)
@@ -120,11 +120,11 @@ func RenderTemplate(w http.ResponseWriter, r *http.Request, templateName string,
 			"parseMarkdown": func(markdownStr string) template.HTML {
 				// Apply shortcodes (posts/archive) prior to markdown rendering using viewing user context
 				processed := applyShortcodesToContent(markdownStr, viewingUser)
-				extensions := parser.CommonExtensions | parser.AutoHeadingIDs
+				extensions := parser.CommonExtensions | parser.AutoHeadingIDs | parser.Footnotes
 				p := parser.NewWithExtensions(extensions)
 				doc := p.Parse([]byte(processed))
 
-				htmlFlags := html.CommonFlags | html.HrefTargetBlank
+				htmlFlags := html.CommonFlags | html.HrefTargetBlank | html.FootnoteReturnLinks
 				opts := html.RendererOptions{Flags: htmlFlags}
 				renderer := html.NewRenderer(opts)
 
