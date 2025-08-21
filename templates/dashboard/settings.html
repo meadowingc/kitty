@@ -2,6 +2,56 @@
 
 {{define "title"}}Settings{{end}}
 
+{{define "styles"}}
+<style>
+/* API inline helper styles */
+.api-inline {
+  font-size:.6rem;
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:.5rem .75rem;
+  margin:.35rem 0 .5rem;
+  background:var(--cozy-brown-50);
+  border:1px dashed var(--cozy-brown-200);
+  padding:.45rem .6rem;
+  border-radius:.6rem;
+}
+.api-inline code {
+  font-family:monospace;
+  font-size:.65rem;
+  background:none;
+  padding:0;
+  letter-spacing:.03em;
+}
+.api-inline button {
+  font-size:.55rem;
+  padding:.25rem .55rem;
+  border-radius:.5rem;
+  border:1px solid var(--cozy-brown-200);
+  background:var(--cozy-brown-100);
+  cursor:pointer;
+}
+.api-inline button:hover {
+  background:var(--cozy-brown-200);
+}
+@media (prefers-color-scheme: dark) {
+  .api-inline {
+    background:var(--cozy-brown-800);
+    border-color:var(--cozy-brown-600);
+  }
+  .api-inline button {
+    background:var(--cozy-brown-800);
+    border-color:var(--cozy-brown-600);
+    color:var(--cozy-brown-100);
+  }
+  .api-inline button:hover {
+    background:var(--cozy-brown-700);
+  }
+}
+</style>
+{{end}}
+
 {{define "content"}}
 <h1>Blog Settings</h1>
 
@@ -74,10 +124,13 @@
             <div class="meta-section-heading">
                 <h4>Homepage</h4>
             </div>
+            <div class="form-hint">
+                Select a published Page to show it instead of the post listing at
+                <code>/u/{{.Data.User.Username}}</code>.
+            </div>
             <div class="post-details-columns">
                 <div class="col">
                     <div class="field">
-                        <label for="homePagePostID" class="form-label-sm">Homepage Page (optional)</label>
                         <select id="homePagePostID" name="homePagePostID" class="input-cozy-sm">
                             <option value="">-- Recent posts listing --</option>
                             {{range .Data.Pages}}
@@ -86,22 +139,85 @@
                             </option>
                             {{end}}
                         </select>
-                        <div class="form-hint">
-                            Select a published Page to show it instead of the post listing at
-                            <code>/u/{{.Data.User.Username}}</code>.
-                        </div>
                     </div>
                 </div>
             </div>
         </div>
-
-        <div class="post-editor-actions" style="display:flex; gap:.5rem; flex-wrap:wrap; margin:0 0 1rem;">
+        <div class="post-editor-actions" style="display:flex; gap:.5rem; flex-wrap:wrap; margin:2rem 0 2rem;">
             <a href="/dashboard" class="btn-cozy-secondary" style="text-decoration:none;line-height:100%;">← Back</a>
             <button type="submit" class="btn-cozy">Save Settings</button>
             <a href="/u/{{ pathEscape .Data.User.Username }}" target="_blank" class="btn-cozy-ghost" style="text-decoration:none;">
                 View Public Site
             </a>
         </div>
+        <hr/>
+        <div class="meta-card" style="margin:2rem 0 1.25rem;">
+            <div class="meta-section-heading">
+                <h4>Data Management</h4>
+            </div>
+            <div class="field" style="margin-bottom:1em;">
+                <label class="form-label-sm">Import Posts</label>
+                <div style="display:flex; gap:.5rem; align-items:center; margin-top:.5rem;">
+                    <a href="/dashboard/import" class="btn-cozy-secondary" style="text-decoration:none;line-height: 100%;">Import Posts</a>
+                </div>
+                <div class="form-hint">Import posts from JSON, RSS feeds, or other sources.</div>
+            </div>
+            
+            <div class="field" style="margin-bottom:1em;">
+                <label class="form-label-sm">Export Posts</label>
+                <div style="display:flex; gap:.5rem; align-items:center; margin-top:.5rem;">
+                    <button id="downloadPostsBtn" class="btn-cozy-secondary" type="button" style="line-height: 100%;">Export All Posts (JSON)</button>
+                </div>
+                <div class="form-hint">Download all your posts and pages as a JSON file for backup or migration.</div>
+            </div>
+
+            <div class="field">
+                <label class="form-label-sm">API Access</label>
+                <div class="api-inline" aria-label="API endpoint" style="margin-top:.5rem;">
+                    <strong style="font-size:.6rem; letter-spacing:.05em; text-transform:uppercase; opacity:.75;">GET</strong>
+                    <code>/api/v1/get-user-posts-messages/{{.Data.User.ID}}</code>
+                    <button id="copyApiBtn" type="button" aria-label="Copy endpoint">Copy</button>
+                    <a href="/api/v1/get-user-posts-messages/{{.Data.User.ID}}" target="_blank" class="btn-cozy-ghost" style="font-size:.55rem; text-decoration:none; padding:.25rem .55rem;">Open ↗</a>
+                </div>
+                <div class="form-hint">API endpoint to programmatically access all your posts and pages data.</div>
+            </div>
+        </div>
     </form>
 </div>
+{{end}}
+
+{{define "scripts"}}
+<script>
+  // Export button
+  document.getElementById('downloadPostsBtn').addEventListener('click', function () {
+      const userId = "{{.Data.User.ID}}";
+      const url = `/api/v1/get-user-posts-messages/${userId}`;
+      fetch(url)
+          .then(r => r.json())
+          .then(data => {
+              const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+              const objUrl = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = objUrl;
+              a.download = `kitty_user_posts_${userId}.json`;
+              document.body.appendChild(a);
+              a.click();
+              a.remove();
+              URL.revokeObjectURL(objUrl);
+          })
+          .catch(err => console.error('Export error:', err));
+  });
+
+  // Copy API endpoint
+  const copyBtn = document.getElementById('copyApiBtn');
+  if (copyBtn) {
+    copyBtn.addEventListener('click', () => {
+      const text = `/api/v1/get-user-posts-messages/{{.Data.User.ID}}`;
+      navigator.clipboard.writeText(text).then(() => {
+        copyBtn.textContent = 'Copied!';
+        setTimeout(() => copyBtn.textContent = 'Copy', 1600);
+      });
+    });
+  }
+</script>
 {{end}}

@@ -37,52 +37,6 @@
   }
 }
 
-/* Inline API helper (lightweight vs full card) */
-.api-inline {
-  font-size:.6rem;
-  display:flex;
-  flex-wrap:wrap;
-  align-items:center;
-  gap:.5rem .75rem;
-  margin:.35rem 0 1.1rem;
-  background:var(--cozy-brown-50);
-  border:1px dashed var(--cozy-brown-200);
-  padding:.45rem .6rem;
-  border-radius:.6rem;
-}
-.api-inline code {
-  font-family:monospace;
-  font-size:.65rem;
-  background:none;
-  padding:0;
-  letter-spacing:.03em;
-}
-.api-inline button {
-  font-size:.55rem;
-  padding:.25rem .55rem;
-  border-radius:.5rem;
-  border:1px solid var(--cozy-brown-200);
-  background:var(--cozy-brown-100);
-  cursor:pointer;
-}
-.api-inline button:hover {
-  background:var(--cozy-brown-200);
-}
-@media (prefers-color-scheme: dark) {
-  .api-inline {
-    background:var(--cozy-brown-800);
-    border-color:var(--cozy-brown-600);
-  }
-  .api-inline button {
-    background:var(--cozy-brown-800);
-    border-color:var(--cozy-brown-600);
-    color:var(--cozy-brown-100);
-  }
-  .api-inline button:hover {
-    background:var(--cozy-brown-700);
-  }
-}
-
 /* Quick links presented as subtle inline pills */
 .quick-links {
   list-style:none;
@@ -204,22 +158,13 @@
 <section class="dashboard-card dashboard-hero">
   <div class="dashboard-actions">
     <a href="/dashboard/post/new" class="btn-cozy">New Post / Page</a>
-    <a href="/dashboard/import" class="btn-cozy-secondary">Import</a>
     <a href="/dashboard/settings" class="btn-cozy-secondary">Settings</a>
-    <button id="downloadPostsBtn" class="btn-cozy-secondary" type="button">Export JSON</button>
     <a href="/u/{{ pathEscape .Global.CurrentUser.Username }}" target="_blank" class="btn-cozy-ghost" style="text-decoration:none;">Public Profile ↗</a>
   </div>
 </section>
 
 <section class="dashboard-card tab-shell">
   <h2>Content</h2>
-
-  <div class="api-inline" aria-label="API endpoint">
-    <strong style="font-size:.6rem; letter-spacing:.05em; text-transform:uppercase; opacity:.75;">API</strong>
-    <code>GET /api/v1/get-user-posts-messages/{{.Global.CurrentUser.ID}}</code>
-    <button id="copyApiBtn" type="button" aria-label="Copy endpoint">Copy</button>
-    <a href="/api/v1/get-user-posts-messages/{{.Global.CurrentUser.ID}}" target="_blank" class="btn-cozy-ghost" style="font-size:.55rem; text-decoration:none; padding:.25rem .55rem;">Open ↗</a>
-  </div>
 
   <div class="tabs" role="tablist" aria-label="Content type" aria-orientation="horizontal" style="margin-bottom:.5rem;">
     <button type="button"
@@ -282,38 +227,6 @@
 
 {{define "scripts"}}
 <script>
-  // Export button
-  document.getElementById('downloadPostsBtn').addEventListener('click', function () {
-      const userId = "{{.Global.CurrentUser.ID}}";
-      const url = `/api/v1/get-user-posts-messages/${userId}`;
-      fetch(url)
-          .then(r => r.json())
-          .then(data => {
-              const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-              const objUrl = URL.createObjectURL(blob);
-              const a = document.createElement('a');
-              a.href = objUrl;
-              a.download = `kitty_user_posts_${userId}.json`;
-              document.body.appendChild(a);
-              a.click();
-              a.remove();
-              URL.revokeObjectURL(objUrl);
-          })
-          .catch(err => console.error('Export error:', err));
-  });
-
-  // Copy API endpoint
-  const copyBtn = document.getElementById('copyApiBtn');
-  if (copyBtn) {
-    copyBtn.addEventListener('click', () => {
-      const text = `/api/v1/get-user-posts-messages/{{.Global.CurrentUser.ID}}`;
-      navigator.clipboard.writeText(text).then(() => {
-        copyBtn.textContent = 'Copied!';
-        setTimeout(() => copyBtn.textContent = 'Copy', 1600);
-      });
-    });
-  }
-
   // Tabs
   const tabButtons = Array.from(document.querySelectorAll('.tab-btn'));
   function setActiveTab(target) {
