@@ -82,6 +82,12 @@ func initRouter() *chi.Mux {
 	}
 
 	csrfMiddleware := csrf.Protect([]byte(csrfKey),
+		csrf.ErrorHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if constants.DEBUG_MODE {
+				log.Printf("CSRF failure: %v host=%s referer=%s origin=%s xfp=%s", csrf.FailureReason(r), r.Host, r.Referer(), r.Header.Get("Origin"), r.Header.Get("X-Forwarded-Proto"))
+			}
+			http.Error(w, "Forbidden - CSRF token invalid", http.StatusForbidden)
+		})),
 		csrf.Path("/"),
 		csrf.SameSite(csrf.SameSiteLaxMode),
 		csrf.TrustedOrigins(trustedOrigins),
