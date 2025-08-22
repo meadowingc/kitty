@@ -29,7 +29,7 @@
             <a href="/dashboard" class="nav-link-cozy">Dashboard</a>
             <a href="/dashboard/settings" class="nav-link-cozy">Settings</a>
             <form action="/logout" method="post" style="display: inline;">
-                {{ csrfField }}
+                {{ .Global.CSRFField }}
                 <button type="submit" class="btn-cozy-ghost">Logout</button>
             </form>
             {{else}}

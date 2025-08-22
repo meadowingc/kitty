@@ -34,6 +34,7 @@ func RenderTemplate(w http.ResponseWriter, r *http.Request, templateName string,
 		DisplayEmoji     string
 		HeaderHTML       template.HTML
 		RequestPath      string
+		CSRFField        template.HTML
 	}
 
 	currentUser := getSignedInUserOrNil(r)
@@ -80,6 +81,7 @@ func RenderTemplate(w http.ResponseWriter, r *http.Request, templateName string,
 			DisplayEmoji:     displayEmoji,
 			HeaderHTML:       headerHTML,
 			RequestPath:      r.URL.Path,
+			CSRFField:        csrf.TemplateField(r),
 		},
 		Data: data,
 	}
@@ -90,9 +92,6 @@ func RenderTemplate(w http.ResponseWriter, r *http.Request, templateName string,
 		templatesDir := "templates/"
 
 		baseTemplate := template.New("layout.html").Funcs(template.FuncMap{
-			"csrfField": func() template.HTML {
-				return csrf.TemplateField(r)
-			},
 			"jsonListToCommaSeparated": func(jsonList datatypes.JSON) string {
 				var tags []string
 				err := json.Unmarshal(jsonList, &tags)

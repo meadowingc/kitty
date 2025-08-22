@@ -128,7 +128,7 @@
     </div>
 
     <form method="post" style="margin:0;">
-        {{ csrfField }}
+        {{ .Global.CSRFField }}
 
         <div class="meta-card" style="margin:0 0 1.25rem;">
             <div class="meta-section-heading">
@@ -232,7 +232,7 @@
             Permanently delete your account and all posts/pages. This cannot be undone. Previously exported data you saved locally is unaffected.
         </p>
         <form method="post" action="/dashboard/delete-account" style="margin:0; display:flex; flex-direction:column; gap:.6rem; max-width:460px;">
-            {{ csrfField }}
+            {{ .Global.CSRFField }}
             <label for="deleteConfirmInput" class="form-label-sm">Type your username to confirm deletion</label>
             <input id="deleteConfirmInput" name="confirm" type="text"
                    placeholder="{{ .Data.User.Username }}" autocomplete="off"
