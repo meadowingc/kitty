@@ -146,7 +146,7 @@ window.addEventListener('load', function () {
     const initialValue = hiddenTextarea.value;
     let currentTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'cave' : 'solar';
 
-    const [otEditor] = new OverType('#bodyEditor', {
+    const [otEditor] = new OverType.OverType('#bodyEditor', {
         value: initialValue,
         toolbar: true,
         showStats: true,
