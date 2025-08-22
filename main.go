@@ -74,21 +74,26 @@ func initRouter() *chi.Mux {
 	if csrfKey == "" {
 		log.Fatal("CSRF_AUTH_KEY not set. Provide a 32+ byte secret via environment or .env file.\nExample (bash): echo CSRF_AUTH_KEY=$(openssl rand -base64 32) >> .env")
 	}
-	trustedOriginsHosts := []string{
-		"localhost:6835",
-		"127.0.0.1:6835",
-		"[::1]:6835",
-		"kitty.meadow.cafe",
+	trustedOrigins := []string{
+		"http://localhost:6835",
+		"http://127.0.0.1:6835",
+		"http://[::1]:6835",
+		"https://kitty.meadow.cafe",
 	}
 
 	csrfMiddleware := csrf.Protect([]byte(csrfKey),
+		csrf.ErrorHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			log.Printf("CSRF failure: %v host=%s referer=%s origin=%s xfp=%s", csrf.FailureReason(r), r.Host, r.Referer(), r.Header.Get("Origin"), r.Header.Get("X-Forwarded-Proto"))
+			http.Error(w, "Forbidden - CSRF token invalid", http.StatusForbidden)
+		})),
 		csrf.Path("/"),
 		csrf.SameSite(csrf.SameSiteLaxMode),
-		csrf.TrustedOrigins(trustedOriginsHosts),
+		csrf.TrustedOrigins(trustedOrigins),
 		csrf.Secure(!constants.DEBUG_MODE),
 	)
 
 	r.Use(csrfMiddleware)
+	r.Use(site.NoCacheForHTML)
 	// r.Use(middleware.Recoverer)
 	r.Use(site.TryPutUserInContextMiddleware)
 

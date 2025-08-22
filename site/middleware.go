@@ -99,3 +99,21 @@ func PlaintextCSRFMiddleware(next http.Handler) http.Handler {
 		next.ServeHTTP(w, r)
 	})
 }
+
+// NoCacheForHTML adds strict no-cache headers for HTML responses to avoid
+// serving stale CSRF-hidden-fields via intermediaries (e.g., CDN/proxy/browser).
+// Applied conditionally for requests that accept HTML and are not assets/api.
+func NoCacheForHTML(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		accept := r.Header.Get("Accept")
+		if strings.Contains(accept, "text/html") &&
+			!strings.HasPrefix(r.URL.Path, "/assets/") &&
+			!strings.HasPrefix(r.URL.Path, "/api/") {
+			w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
+			w.Header().Set("Pragma", "no-cache")
+			w.Header().Set("Expires", "0")
+			w.Header().Add("Vary", "Cookie")
+		}
+		next.ServeHTTP(w, r)
+	})
+}
