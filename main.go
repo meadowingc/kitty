@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"kitty/constants"
 	"kitty/database"
 	"kitty/site"
@@ -13,12 +14,11 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/go-chi/cors"
-	"github.com/gorilla/csrf"
-
-	"github.com/go-chi/chi/middleware"
+	"github.com/fatih/color"
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/cors"
 	"github.com/go-chi/httprate"
+	"github.com/gorilla/csrf"
 	"github.com/joho/godotenv"
 )
 
@@ -63,7 +63,7 @@ func initRouter() *chi.Mux {
 
 	r.Use(CORSMiddleware.Handler)
 	r.Use(site.RealIPMiddleware)
-	r.Use(middleware.Logger)
+	r.Use(Logger)
 	r.Use(httprate.LimitByIP(50, time.Minute)) // general rate limiter for all routes (shared across all routes)
 
 	if constants.DEBUG_MODE {
@@ -183,4 +183,98 @@ func initRouter() *chi.Mux {
 	})
 
 	return r
+}
+
+func Logger(next http.Handler) http.Handler {
+	// Define color functions
+	gray := color.New(color.FgHiBlack).SprintFunc()
+	blue := color.New(color.FgBlue).SprintFunc()
+	magenta := color.New(color.FgMagenta).SprintFunc()
+
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
+
+		// Wrap writer to capture status and bytes
+		ww := &responseWriter{ResponseWriter: w, statusCode: http.StatusOK}
+
+		// Process request
+		next.ServeHTTP(ww, r)
+
+		// Compute duration
+		duration := time.Since(start)
+
+		// Determine level and status coloring
+		var level, statusStr string
+		switch {
+		case ww.statusCode >= 500:
+			level = "ERROR"
+			statusStr = color.New(color.FgRed).Sprintf("%d", ww.statusCode)
+		case ww.statusCode >= 400:
+			level = "WARN"
+			statusStr = color.New(color.FgYellow).Sprintf("%d", ww.statusCode)
+		case ww.statusCode >= 300:
+			level = "INFO"
+			statusStr = color.New(color.FgCyan).Sprintf("%d", ww.statusCode)
+		default: // 2xx and others
+			level = "INFO"
+			statusStr = color.New(color.FgGreen).Sprintf("%d", ww.statusCode)
+		}
+
+		// Duration coloring
+		var durStr string
+		switch {
+		case duration > 500*time.Millisecond:
+			durStr = color.New(color.FgRed).Sprintf("%v", duration)
+		case duration > 100*time.Millisecond:
+			durStr = color.New(color.FgYellow).Sprintf("%v", duration)
+		default:
+			durStr = color.New(color.FgGreen).Sprintf("%v", duration)
+		}
+
+		// Size formatting
+		var sizeStr string
+		switch {
+		case ww.bytesWritten > 1024*1024:
+			sizeStr = fmt.Sprintf("%.1fMB", float64(ww.bytesWritten)/(1024*1024))
+		case ww.bytesWritten > 1024:
+			sizeStr = fmt.Sprintf("%.1fKB", float64(ww.bytesWritten)/1024)
+		default:
+			sizeStr = fmt.Sprintf("%dB", ww.bytesWritten)
+		}
+
+		log.Printf("%s %s %s %s %s %s",
+			gray(fmt.Sprintf("[%s]", level)),
+			blue(r.Method),
+			magenta(r.URL.Path),
+			statusStr,
+			durStr,
+			gray(fmt.Sprintf("(%s)", sizeStr)),
+		)
+	})
+}
+
+// responseWriter captures status code and bytes written
+type responseWriter struct {
+	http.ResponseWriter
+	statusCode   int
+	bytesWritten int
+	wroteHeader  bool
+}
+
+func (rw *responseWriter) WriteHeader(code int) {
+	if rw.wroteHeader {
+		return
+	}
+	rw.statusCode = code
+	rw.wroteHeader = true
+	rw.ResponseWriter.WriteHeader(code)
+}
+
+func (rw *responseWriter) Write(b []byte) (int, error) {
+	if !rw.wroteHeader {
+		rw.WriteHeader(http.StatusOK)
+	}
+	n, err := rw.ResponseWriter.Write(b)
+	rw.bytesWritten += n
+	return n, err
 }
