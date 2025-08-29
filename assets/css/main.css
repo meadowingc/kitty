@@ -682,6 +682,9 @@ footer {
   #bodyEditor {
     height: 55vh;
   }
+  body {
+    padding: 1rem 0.25rem
+  }
 }
 
 @media (prefers-color-scheme: dark) {
