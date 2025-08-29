@@ -140,6 +140,7 @@
 <script>
 window.addEventListener('load', function () {
     let saveTimeout;
+    const isEditing = {{if $isEditing}}true{{else}}false{{end}};
 
     // OverType integration
     const hiddenTextarea = document.getElementById('body');
@@ -247,6 +248,7 @@ window.addEventListener('load', function () {
     const showOnHomepageCheckbox = document.getElementById('showOnHomepage');
     const showOnHomepageLabel = showOnHomepageCheckbox.closest('label');
 
+
     function toggleShowOnHomepage() {
         if (isPageCheckbox.checked) {
             showOnHomepageLabel.style.display = 'none';
@@ -269,11 +271,11 @@ window.addEventListener('load', function () {
         const detailsHeading = document.getElementById('detailsHeading');
         const saveMsg = document.getElementById('saveMessage');
         if(editHeading){
-            const base = {{$isEditing}} ? (isPage ? 'Edit Page' : 'Edit Post') : (isPage ? 'New Page' : 'New Post');
+            const base = isEditing ? (isPage ? 'Edit Page' : 'Edit Post') : (isPage ? 'New Page' : 'New Post');
             editHeading.textContent = base;
         }
         if(submitBtn){
-            const action = {{$isEditing}} ? (isPage ? 'Update Page' : 'Update Post') : (isPage ? 'Create Page' : 'Create Post');
+            const action = isEditing ? (isPage ? 'Update Page' : 'Update Post') : (isPage ? 'Create Page' : 'Create Post');
             submitBtn.value = action;
         }
         if(detailsHeading){
