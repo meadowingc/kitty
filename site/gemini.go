@@ -9,6 +9,7 @@ import (
 	"kitty/constants"
 	"kitty/database"
 	"log"
+	"net"
 	"net/url"
 	"os"
 	"regexp"
@@ -28,46 +29,43 @@ const (
 )
 
 func StartGeminiServer() {
-	// Ensure cert files exist
-	if _, err := os.Stat(geminiCertFile); err != nil {
-		panic(missingCertsMessage("certificate", geminiCertFile, geminiKeyFile))
-	}
-	if _, err := os.Stat(geminiKeyFile); err != nil {
-		panic(missingCertsMessage("key", geminiCertFile, geminiKeyFile))
-	}
+	plaintext := os.Getenv("GEMINI_PLAINTEXT") == "1"
 
-	certPair, err := tls.LoadX509KeyPair(geminiCertFile, geminiKeyFile)
-	if err != nil {
-		panic(fmt.Sprintf("Failed loading Gemini certificate/key: %v", err))
+	var ln net.Listener
+	var err error
+
+	if plaintext {
+		ln, err = net.Listen("tcp", geminiListenPort)
+		if err != nil {
+			panic(fmt.Sprintf("Failed starting Gemini plaintext listener: %v", err))
+		}
+		log.Printf("Gemini (PLAINTEXT mode) listening on %s (expect external TLS termination)", geminiListenPort)
+	} else {
+		if _, err := os.Stat(geminiCertFile); err != nil {
+			panic(missingCertsMessage("certificate", geminiCertFile, geminiKeyFile))
+		}
+		if _, err := os.Stat(geminiKeyFile); err != nil {
+			panic(missingCertsMessage("key", geminiCertFile, geminiKeyFile))
+		}
+		certPair, err := tls.LoadX509KeyPair(geminiCertFile, geminiKeyFile)
+		if err != nil {
+			panic(fmt.Sprintf("Failed loading Gemini certificate/key: %v", err))
+		}
+		cfg := &tls.Config{Certificates: []tls.Certificate{certPair}, MinVersion: tls.VersionTLS12}
+		ln, err = tls.Listen("tcp", geminiListenPort, cfg)
+		if err != nil {
+			panic(fmt.Sprintf("Failed starting Gemini TLS listener: %v", err))
+		}
+		log.Printf("Gemini (TLS mode) listening on gemini://localhost%s", geminiListenPort)
 	}
-
-	cfg := &tls.Config{
-		Certificates: []tls.Certificate{certPair},
-		MinVersion:   tls.VersionTLS12,
-	}
-
-	ln, err := tls.Listen("tcp", geminiListenPort, cfg)
-	if err != nil {
-		panic(fmt.Sprintf("Failed starting Gemini listener: %v", err))
-	}
-
-	log.Printf("Gemini listening on gemini://localhost%s", geminiListenPort)
-
 	for {
 		c, err := ln.Accept()
 		if err != nil {
-			// Accept errors are transient; log and continue.
 			log.Printf("Gemini accept error: %v", err)
 			continue
 		}
-		tc, ok := c.(*tls.Conn)
-		if !ok {
-			log.Printf("Gemini accept: received non-TLS connection type")
-			_ = c.Close()
-			continue
-		}
 		log.Printf("Gemini: new connection from %s", c.RemoteAddr().String())
-		go handleGeminiConn(tc)
+		go handleGeminiConn(c)
 	}
 }
 
@@ -83,11 +81,11 @@ func gemStatusLine(code, meta string) string {
 	return fmt.Sprintf("%s %s\r\n", code, meta)
 }
 
-func writeGemError(conn *tls.Conn, code, meta string) {
+func writeGemError(conn net.Conn, code, meta string) {
 	_, _ = conn.Write([]byte(gemStatusLine(code, meta)))
 }
 
-func handleGeminiConn(conn *tls.Conn) {
+func handleGeminiConn(conn net.Conn) {
 	defer func() {
 		_ = conn.Close()
 	}()
@@ -141,7 +139,7 @@ func handleGeminiConn(conn *tls.Conn) {
 	}
 }
 
-func serveGeminiHome(conn *tls.Conn) {
+func serveGeminiHome(conn net.Conn) {
 	// Global recent published non-page posts (not limited to show_on_homepage to match example)
 	// Include blog title for pattern: username - BlogTitle - PostTitle (if blog title present)
 	type recentPost struct {
@@ -192,7 +190,7 @@ func serveGeminiHome(conn *tls.Conn) {
 	writeGemSuccess(conn, out.String()) // end home
 }
 
-func serveGeminiUserScoped(conn *tls.Conn, path string) {
+func serveGeminiUserScoped(conn net.Conn, path string) {
 	trimmed := strings.TrimPrefix(path, "/u/")
 	if trimmed == "" {
 		writeGemError(conn, "51", "Not Found")
@@ -246,7 +244,7 @@ func serveGeminiUserScoped(conn *tls.Conn, path string) {
 	writeGemError(conn, "51", "Not Found")
 }
 
-func serveGeminiUserRoot(conn *tls.Conn, user *database.AdminUser) {
+func serveGeminiUserRoot(conn net.Conn, user *database.AdminUser) {
 	// If a homepage page is configured and valid, render it (same behavior as HTTP)
 	if user.HomePagePostID != nil {
 		var page database.Post
@@ -260,7 +258,7 @@ func serveGeminiUserRoot(conn *tls.Conn, user *database.AdminUser) {
 	serveGeminiArchive(conn, user)
 }
 
-func serveGeminiArchive(conn *tls.Conn, user *database.AdminUser) {
+func serveGeminiArchive(conn net.Conn, user *database.AdminUser) {
 	var posts []database.Post
 	database.GetDB().Where("admin_user_id = ? AND published = ? AND is_page = ?", user.ID, true, false).
 		Order("published_date DESC").
@@ -318,7 +316,7 @@ func serveGeminiArchive(conn *tls.Conn, user *database.AdminUser) {
 	writeGemSuccess(conn, out.String())
 }
 
-func serveGeminiTag(conn *tls.Conn, user *database.AdminUser, tag string) {
+func serveGeminiTag(conn net.Conn, user *database.AdminUser, tag string) {
 	var posts []database.Post
 	database.GetDB().Where("admin_user_id = ? AND published = ?", user.ID, true).
 		Order("published_date DESC").
@@ -372,7 +370,7 @@ func serveGeminiTag(conn *tls.Conn, user *database.AdminUser, tag string) {
 	writeGemSuccess(conn, out.String())
 }
 
-func serveGeminiPost(conn *tls.Conn, user *database.AdminUser, slug string) {
+func serveGeminiPost(conn net.Conn, user *database.AdminUser, slug string) {
 	var post database.Post
 	if err := database.GetDB().Where("slug = ? AND admin_user_id = ? AND published = ?", slug, user.ID, true).First(&post).Error; err != nil {
 		writeGemError(conn, "51", "Post not found")
@@ -381,7 +379,7 @@ func serveGeminiPost(conn *tls.Conn, user *database.AdminUser, slug string) {
 	renderGeminiPost(conn, user, &post)
 }
 
-func renderGeminiPost(conn *tls.Conn, user *database.AdminUser, post *database.Post) {
+func renderGeminiPost(conn net.Conn, user *database.AdminUser, post *database.Post) {
 	var out strings.Builder
 	// Header
 	if strings.TrimSpace(user.HeaderMarkdown) != "" {
@@ -424,7 +422,7 @@ func renderGeminiPost(conn *tls.Conn, user *database.AdminUser, post *database.P
 	writeGemSuccess(conn, out.String())
 }
 
-func writeGemSuccess(conn *tls.Conn, body string) {
+func writeGemSuccess(conn net.Conn, body string) {
 	_, _ = conn.Write([]byte(gemStatusLine("20", "text/gemini")))
 	_, _ = conn.Write([]byte(body))
 	if !strings.HasSuffix(body, "\n") {
