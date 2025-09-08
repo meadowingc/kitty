@@ -152,7 +152,7 @@ func serveGeminiHome(conn net.Conn) {
 	database.GetDB().Table("posts").
 		Select("posts.slug, posts.title, posts.published_date, admin_users.username").
 		Joins("JOIN admin_users ON admin_users.id = posts.admin_user_id").
-		Where("posts.published = ? AND posts.is_page = ?", true, false).
+		Where("posts.published = ? AND posts.is_page = ? AND posts.show_on_homepage = ?", true, false, true).
 		Order("posts.published_date desc").
 		Limit(constants.HOMEPAGE_RECENT_POSTS_LIMIT).
 		Scan(&posts)
