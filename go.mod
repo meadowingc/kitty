@@ -3,6 +3,7 @@ module kitty
 go 1.25.0
 
 require (
+	git.sr.ht/~kota/goldmark-gemtext v0.3.3
 	github.com/fatih/color v1.18.0
 	github.com/go-chi/chi/v5 v5.2.2
 	github.com/go-chi/cors v1.2.2
@@ -11,6 +12,7 @@ require (
 	github.com/gorilla/csrf v1.7.3
 	github.com/gosimple/slug v1.15.0
 	github.com/joho/godotenv v1.5.1
+	github.com/yuin/goldmark v1.7.13
 	golang.org/x/crypto v0.41.0
 	gorm.io/datatypes v1.2.6
 	gorm.io/driver/sqlite v1.6.0
@@ -19,6 +21,8 @@ require (
 
 require (
 	filippo.io/edwards25519 v1.1.0 // indirect
+	git.sr.ht/~kota/fuckery v0.2.0 // indirect
+	git.sr.ht/~kota/goldmark-wiki v0.0.0-20211119234413-891f759dc3aa // indirect
 	github.com/go-sql-driver/mysql v1.9.3 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/gorilla/securecookie v1.1.2 // indirect

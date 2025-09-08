@@ -100,7 +100,7 @@ func applyShortcodesToContent(content string, user *database.AdminUser) string {
 		var b strings.Builder
 		for _, p := range filtered {
 			date := p.PublishedDate.Format("2006-01-02")
-			b.WriteString(fmt.Sprintf("* `%s` — [%s](/u/%s/%s)\n",
+			b.WriteString(fmt.Sprintf("- `%s` — [%s](/u/%s/%s)\n",
 				date,
 				escapeMarkdownLinkText(p.Title),
 				urlPathEscape(user.Username),

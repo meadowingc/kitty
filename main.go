@@ -40,6 +40,8 @@ func main() {
 		}
 	}()
 
+	go site.StartGeminiServer()
+
 	// Block until a signal is received
 	<-signals
 	log.Println("Shutting down gracefully...")
