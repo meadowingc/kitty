@@ -2,6 +2,7 @@ package database
 
 import (
 	"log"
+	"os"
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -10,8 +11,12 @@ import (
 var db *gorm.DB
 
 func initDatabase() {
+	dbPath := "kitty.db"
+	if envPath := os.Getenv("KITTY_DB_PATH"); envPath != "" {
+		dbPath = envPath
+	}
 	var err error
-	db, err = gorm.Open(sqlite.Open("file:kitty.db?cache=shared&mode=rwc&_journal_mode=WAL"), &gorm.Config{})
+	db, err = gorm.Open(sqlite.Open("file:"+dbPath+"?cache=shared&mode=rwc&_journal_mode=WAL"), &gorm.Config{})
 	if err != nil {
 		log.Fatalf("failed to connect database: %v", err)
 	}

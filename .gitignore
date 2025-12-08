@@ -12,3 +12,6 @@ assets/css/main.css
 .env
 
 /cert/
+
+/tests/*.test
+/tests/test_output.txt
