@@ -25,6 +25,12 @@ type Post struct {
 	ShowOnHomepage  bool
 }
 
+type Backlink struct {
+	gorm.Model
+	SourcePostID uint `gorm:"index:idx_source_target,unique"`
+	TargetPostID uint `gorm:"index:idx_source_target,unique;index:idx_target"`
+}
+
 type AdminUser struct {
 	gorm.Model
 	Username       string         `gorm:"uniqueIndex"`
@@ -35,6 +41,7 @@ type AdminUser struct {
 	HeaderMarkdown string `gorm:"type:text"`
 	BlogTitle      string
 	Emoji          string
+	ShowBacklinks  bool `gorm:"default:true"`
 }
 
 func (u *AdminUser) BeforeCreate(tx *gorm.DB) (err error) {

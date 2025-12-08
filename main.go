@@ -80,7 +80,7 @@ func initRouter() *chi.Mux {
 		"http://localhost:6835",
 		"http://127.0.0.1:6835",
 		"http://[::1]:6835",
-		"https://kitty.meadow.cafe",
+		constants.PUBLIC_URL,
 	}
 
 	csrfMiddleware := csrf.Protect([]byte(csrfKey),

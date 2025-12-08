@@ -438,6 +438,14 @@ func CreatePost(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Error creating post", http.StatusInternalServerError)
 			return
 		}
+
+		// Extract and save backlinks asynchronously
+		go func(postID uint, body string) {
+			post := database.Post{Body: body}
+			post.ID = postID
+			_ = ExtractAndSaveBacklinks(&post)
+		}(newPost.ID, newPost.Body)
+
 		http.Redirect(w, r, "/dashboard/post/"+strconv.Itoa(int(newPost.ID)), http.StatusSeeOther)
 	default:
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -507,6 +515,13 @@ func UpdatePost(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Error updating guestbook", http.StatusInternalServerError)
 			return
 		}
+
+		// Extract and save backlinks asynchronously
+		go func(postID uint, body string) {
+			post := database.Post{Body: body}
+			post.ID = postID
+			_ = ExtractAndSaveBacklinks(&post)
+		}(post.ID, post.Body)
 
 		http.Redirect(w, r, "/dashboard/post/"+postID, http.StatusSeeOther)
 
@@ -607,7 +622,19 @@ func PublicViewPostBySlug(w http.ResponseWriter, r *http.Request) {
 	// set viewing user context so templates can show blog title / header markdown
 	r = setViewingUserInContext(r, &admin)
 
-	RenderTemplate(w, r, "public_view_post", post)
+	// Get backlinks for this post
+	backlinks, _ := database.GetBacklinksForPost(post.ID)
+
+	// Create data structure with post and backlinks
+	data := struct {
+		database.Post
+		Backlinks []database.PostWithUser
+	}{
+		Post:      post,
+		Backlinks: backlinks,
+	}
+
+	RenderTemplate(w, r, "public_view_post", data)
 }
 
 func PublicViewUserByUsername(w http.ResponseWriter, r *http.Request) {
@@ -678,6 +705,7 @@ func UserSettings(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		user.Emoji = emoji
+		user.ShowBacklinks = r.FormValue("showBacklinks") == "on"
 
 		if homePagePostIDStr == "" {
 			user.HomePagePostID = nil

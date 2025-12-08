@@ -17,7 +17,7 @@ func initDatabase() {
 	}
 
 	// Migrate the schema
-	err = db.AutoMigrate(&Post{}, &AdminUser{})
+	err = db.AutoMigrate(&Post{}, &AdminUser{}, &Backlink{})
 	if err != nil {
 		log.Fatalf("failed to migrate database: %v", err)
 	}

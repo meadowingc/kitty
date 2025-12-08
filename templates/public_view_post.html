@@ -33,4 +33,19 @@
 </div>
 {{ end }}
 
+{{/* Backlinks section */}}
+{{ if and .Data.Backlinks .Global.ViewingUser .Global.ViewingUser.ShowBacklinks }}
+<div class="post-backlinks" style="margin-top:40px; padding-top:20px; border-top:1px solid #e0e0e0;">
+    <h3 style="font-size:1.1em; margin-bottom:10px;">Posts that link to this page:</h3>
+    <ul style="list-style:none; padding:0;">
+    {{ range .Data.Backlinks }}
+        <li style="margin-bottom:8px;">
+            <a href="/u/{{ pathEscape .Username }}/{{ pathEscape .Slug }}">{{ .Title }}</a>
+            <small style="color:#666;"> by <a href="/u/{{ pathEscape .Username }}">{{ .Username }}</a> — {{ .PublishedDate | dateFmt "Jan 02, 2006" }}</small>
+        </li>
+    {{ end }}
+    </ul>
+</div>
+{{ end }}
+
 {{end}}

@@ -148,13 +148,22 @@
                 <div class="form-hint">If empty, your username is used.</div>
             </div>
 
-            <div class="field">
+            <div class="field" style="margin-bottom:1em;">
                 <label for="headerMarkdown" class="form-label-sm">Header Markdown (optional)</label>
                 <textarea id="headerMarkdown" name="headerMarkdown" rows="8"
                             class="input-cozy-sm"
                             style="font-family:monospace; resize:vertical;"
                             placeholder="Appears above all posts/pages">{{.Data.User.HeaderMarkdown}}</textarea>
                 <div class="form-hint">Supports basic markdown. Max 8000 chars.</div>
+            </div>
+
+            <div class="field">
+                <label style="display:flex; align-items:center; gap:.5rem; cursor:pointer;">
+                    <input type="checkbox" id="showBacklinks" name="showBacklinks" 
+                           {{if .Data.User.ShowBacklinks}}checked{{end}}>
+                    <span class="form-label-sm" style="margin:0;">Show backlinks on my posts</span>
+                </label>
+                <div class="form-hint">When enabled, posts that link to your content will be listed at the bottom of each post.</div>
             </div>
         </div>
 
