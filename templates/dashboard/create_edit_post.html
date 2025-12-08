@@ -385,7 +385,7 @@ window.addEventListener('load', function () {
     }
 
     document.addEventListener('keydown', function (e) {
-        if (e.ctrlKey && e.key === 's') {
+        if ((e.ctrlKey || e.metaKey) && e.key === 's') {
             e.preventDefault();
             triggerSave();
         } else if (isEditing) {
