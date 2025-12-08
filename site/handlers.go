@@ -61,6 +61,7 @@ func UserSignIn(w http.ResponseWriter, r *http.Request) {
 			Name:     string(AuthenticatedUserTokenCookieName),
 			Value:    token,
 			Path:     "/",
+			MaxAge:   365 * 24 * 60 * 60, // 1 year
 			HttpOnly: true,
 			Secure:   !constants.DEBUG_MODE,
 			SameSite: http.SameSiteLaxMode,
@@ -110,6 +111,7 @@ func UserSignUp(w http.ResponseWriter, r *http.Request) {
 			Name:     string(AuthenticatedUserTokenCookieName),
 			Value:    token,
 			Path:     "/",
+			MaxAge:   365 * 24 * 60 * 60, // 1 year
 			HttpOnly: true,
 			Secure:   !constants.DEBUG_MODE,
 			SameSite: http.SameSiteLaxMode,
