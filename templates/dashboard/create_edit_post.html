@@ -121,8 +121,12 @@
         </div>
 
         <div id="bodyEditorShell">
-            <div style="padding:.6rem .9rem; font-size:.7rem; font-weight:600; letter-spacing:.05em; text-transform:uppercase; opacity:.7;">
-                Body{{if $isEditing}} (auto-save enabled){{else}} (manual save){{end}}
+            <div class="editor-header">
+                <span>Body{{if $isEditing}} (auto-save enabled){{else}} (manual save){{end}}</span>
+                <button type="button" class="fullscreen-toggle" id="fullscreenToggle">
+                    <span class="fullscreen-icon">⛶</span>
+                    <span class="fullscreen-text">Fullscreen</span>
+                </button>
             </div>
             <div id="bodyEditor"></div>
             <textarea name="body" id="body" hidden>{{if $isEditing}}{{.Data.Body}}{{end}}</textarea>
@@ -180,6 +184,54 @@ window.addEventListener('load', function () {
     }
 
     ensureScrollReset();
+    
+    // Fullscreen toggle functionality
+    const fullscreenToggle = document.getElementById('fullscreenToggle');
+    const fullscreenIcon = fullscreenToggle.querySelector('.fullscreen-icon');
+    const fullscreenText = fullscreenToggle.querySelector('.fullscreen-text');
+    let isFullscreen = false;
+
+    function toggleFullscreen() {
+        isFullscreen = !isFullscreen;
+        
+        if (isFullscreen) {
+            document.body.classList.add('fullscreen-mode');
+            fullscreenIcon.textContent = '⛶';
+            fullscreenText.textContent = 'Exit Fullscreen';
+            
+            // Focus the editor
+            if (otEditor && otEditor.focus) {
+                setTimeout(() => otEditor.focus(), 100);
+            }
+        } else {
+            document.body.classList.remove('fullscreen-mode');
+            fullscreenIcon.textContent = '⛶';
+            fullscreenText.textContent = 'Fullscreen';
+        }
+        
+        // Ensure editor refreshes properly after layout change
+        setTimeout(() => {
+            if (otEditor && otEditor.refresh) {
+                otEditor.refresh();
+            }
+        }, 100);
+    }
+
+    fullscreenToggle.addEventListener('click', toggleFullscreen);
+
+    // Keyboard shortcuts for fullscreen
+    document.addEventListener('keydown', function(e) {
+        // Escape key to exit fullscreen
+        if (e.key === 'Escape' && isFullscreen) {
+            e.preventDefault();
+            toggleFullscreen();
+        }
+        // F11 key to toggle fullscreen (with preventDefault to avoid browser fullscreen)
+        if (e.key === 'F11') {
+            e.preventDefault();
+            toggleFullscreen();
+        }
+    });
     
     // Tag suggestion click handler
     (function(){
