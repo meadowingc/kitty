@@ -41,7 +41,8 @@ type AdminUser struct {
 	HeaderMarkdown string `gorm:"type:text"`
 	BlogTitle      string
 	Emoji          string
-	ShowBacklinks  bool `gorm:"default:true"`
+	ShowBacklinks  bool   `gorm:"default:true"`
+	CustomCSS      string `gorm:"type:text"`
 }
 
 func (u *AdminUser) BeforeCreate(tx *gorm.DB) (err error) {

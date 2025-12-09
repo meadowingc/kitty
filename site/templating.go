@@ -33,6 +33,7 @@ func RenderTemplate(w http.ResponseWriter, r *http.Request, templateName string,
 		DisplaySiteTitle string
 		DisplayEmoji     string
 		HeaderHTML       template.HTML
+		CustomCSS        template.CSS
 		RequestPath      string
 		CSRFField        template.HTML
 	}
@@ -67,6 +68,11 @@ func RenderTemplate(w http.ResponseWriter, r *http.Request, templateName string,
 		headerHTML = template.HTML(rendered)
 	}
 
+	var customCSS template.CSS
+	if viewingUser != nil && strings.TrimSpace(viewingUser.CustomCSS) != "" {
+		customCSS = template.CSS(viewingUser.CustomCSS)
+	}
+
 	templateData := struct {
 		Global GlobalTemplateData
 		Data   any
@@ -80,6 +86,7 @@ func RenderTemplate(w http.ResponseWriter, r *http.Request, templateName string,
 			DisplaySiteTitle: displayTitle,
 			DisplayEmoji:     displayEmoji,
 			HeaderHTML:       headerHTML,
+			CustomCSS:        customCSS,
 			RequestPath:      r.URL.Path,
 			CSRFField:        csrf.TemplateField(r),
 		},

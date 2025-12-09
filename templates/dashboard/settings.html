@@ -4,6 +4,77 @@
 
 {{define "styles"}}
 <style>
+/* Tabs styles */
+.settings-tabs {
+  display:flex;
+  gap:0;
+  border-bottom:2px solid var(--cozy-brown-200);
+  margin-bottom:1.5rem;
+  overflow-x:auto;
+  -webkit-overflow-scrolling:touch;
+  scrollbar-width:none;
+}
+.settings-tabs::-webkit-scrollbar {
+  display:none;
+}
+.settings-tabs button {
+  background:none;
+  border:none;
+  padding:.75rem 1.25rem;
+  font-size:.85rem;
+  font-weight:500;
+  cursor:pointer;
+  border-bottom:2px solid transparent;
+  margin-bottom:-2px;
+  color:var(--cozy-brown-600);
+  transition:all .15s ease;
+  white-space:nowrap;
+  flex-shrink:0;
+}
+.settings-tabs button:hover {
+  color:var(--cozy-brown-800);
+  background:var(--cozy-brown-50);
+}
+.settings-tabs button.active {
+  color:var(--cozy-brown-900);
+  border-bottom-color:var(--cozy-brown-700);
+}
+.tab-content {
+  display:none;
+}
+.tab-content.active {
+  display:block;
+}
+/* Mobile: smaller padding, allow scroll */
+@media (max-width: 600px) {
+  .settings-tabs {
+    margin-left:-1rem;
+    margin-right:-1rem;
+    padding-left:1rem;
+    padding-right:1rem;
+  }
+  .settings-tabs button {
+    padding:.6rem .9rem;
+    font-size:.8rem;
+  }
+}
+@media (prefers-color-scheme: dark) {
+  .settings-tabs {
+    border-bottom-color:var(--cozy-brown-600);
+  }
+  .settings-tabs button {
+    color:var(--cozy-brown-300);
+  }
+  .settings-tabs button:hover {
+    color:var(--cozy-brown-100);
+    background:var(--cozy-brown-700);
+  }
+  .settings-tabs button.active {
+    color:var(--cozy-brown-100);
+    border-bottom-color:var(--cozy-brown-300);
+  }
+}
+
 /* API inline helper styles */
 .api-inline {
   font-size:.6rem;
@@ -95,179 +166,254 @@
 
 <div class="settings-shell" style="max-width:950px;">
 
-    <div class="meta-card" style="margin:0 0 1.25rem;">
-        <div class="meta-section-heading">
-            <h4>Info & Tips</h4>
-        </div>
-        <div class="field" style="font-size:.8rem; line-height:1.45;">
-            <p style="margin:.4rem 0;">
-                To add an RSS link to your header/navigation, include markdown like:
-                <code>[RSS](/u/{{ pathEscape .Data.User.Username }}/feed.xml)</code> in the Header Markdown field.
-            </p>
-            <p style="margin:.4rem 0;">
-                Absolute URL:
-                <code>{{.Global.PublicURL}}/u/{{ pathEscape .Data.User.Username }}/feed.xml</code>
-            </p>
-            <p style="margin:.4rem 0;">
-                The header markdown renders above all posts/pages.
-            </p>
-            <p style="margin:.4rem 0;">
-                Shortcodes you can embed in Header Markdown or any Post/Page body:
-            </p>
-            <ul style="margin:.4rem 0 .6rem 1.1rem; padding:0; font-size:.75rem;">
-                <li><code>{posts}</code> – list latest 10 posts.</li>
-                <li><code>{posts:5}</code> – list latest 5 posts.</li>
-                <li><code>{posts:tag=tech}</code> – list latest 10 posts tagged <code>tech</code>.</li>
-                <li><code>{posts:25:tag=go}</code> – list latest 25 posts tagged <code>go</code>.</li>
-                <li><code>{archive}</code> – full archive grouped by year (also available at <code>/u/{{ pathEscape .Data.User.Username }}/archive</code>).</li>
-            </ul>
-            <p style="margin:.4rem 0;">
-                Add an archive link manually, e.g. <code>[Archive](/u/{{ pathEscape .Data.User.Username }}/archive)</code>.
-            </p>
-        </div>
+    <div class="settings-tabs">
+        <button type="button" class="tab-btn active" data-tab="general">General</button>
+        <button type="button" class="tab-btn" data-tab="appearance">Appearance</button>
+        <button type="button" class="tab-btn" data-tab="homepage">Homepage</button>
+        <button type="button" class="tab-btn" data-tab="data">Data</button>
+        <button type="button" class="tab-btn" data-tab="danger">Danger Zone</button>
     </div>
 
     <form method="post" style="margin:0;">
         {{ .Global.CSRFField }}
 
-        <div class="meta-card" style="margin:0 0 1.25rem;">
-            <div class="meta-section-heading">
-                <h4>General</h4>
-            </div>
-            <div class="field" style="margin-bottom:1em;">
-                <label for="emoji" class="form-label-sm">Site Emoji (optional)</label>
-                <input type="text" id="emoji" name="emoji" maxlength="16"
-                        value="{{.Data.User.Emoji}}" class="input-cozy-sm" placeholder="e.g. 😺">
-                <div class="form-hint">For this to work properly please use a single emoji! Defaults to 😺 if empty.</div>
+        <!-- General Tab -->
+        <div class="tab-content active" data-tab="general">
+            <div class="meta-card" style="margin:0 0 1.25rem;">
+                <div class="meta-section-heading">
+                    <h4>Info & Tips</h4>
+                </div>
+                <div class="field" style="font-size:.8rem; line-height:1.45;">
+                    <p style="margin:.4rem 0;">
+                        To add an RSS link to your header/navigation, include markdown like:
+                        <code>[RSS](/u/{{ pathEscape .Data.User.Username }}/feed.xml)</code> in the Header Markdown field.
+                    </p>
+                    <p style="margin:.4rem 0;">
+                        Absolute URL:
+                        <code>{{.Global.PublicURL}}/u/{{ pathEscape .Data.User.Username }}/feed.xml</code>
+                    </p>
+                    <p style="margin:.4rem 0;">
+                        The header markdown renders above all posts/pages.
+                    </p>
+                    <p style="margin:.4rem 0;">
+                        Shortcodes you can embed in Header Markdown or any Post/Page body:
+                    </p>
+                    <ul style="margin:.4rem 0 .6rem 1.1rem; padding:0; font-size:.75rem;">
+                        <li><code>{posts}</code> - list latest 10 posts.</li>
+                        <li><code>{posts:5}</code> - list latest 5 posts.</li>
+                        <li><code>{posts:tag=tech}</code> - list latest 10 posts tagged <code>tech</code>.</li>
+                        <li><code>{posts:25:tag=go}</code> - list latest 25 posts tagged <code>go</code>.</li>
+                        <li><code>{archive}</code> - full archive grouped by year (also available at <code>/u/{{ pathEscape .Data.User.Username }}/archive</code>).</li>
+                    </ul>
+                    <p style="margin:.4rem 0;">
+                        Add an archive link manually, e.g. <code>[Archive](/u/{{ pathEscape .Data.User.Username }}/archive)</code>.
+                    </p>
+                </div>
             </div>
 
-            <div class="field" style="margin-bottom:1em;">
-                <label for="blogTitle" class="form-label-sm">Blog Title (optional)</label>
-                <input type="text" id="blogTitle" name="blogTitle" maxlength="120"
-                        value="{{.Data.User.BlogTitle}}" class="input-cozy-sm" placeholder="Defaults to username">
-                <div class="form-hint">If empty, your username is used.</div>
-            </div>
+            <div class="meta-card" style="margin:0 0 1.25rem;">
+                <div class="meta-section-heading">
+                    <h4>General Settings</h4>
+                </div>
+                <div class="field" style="margin-bottom:1em;">
+                    <label for="emoji" class="form-label-sm">Site Emoji (optional)</label>
+                    <input type="text" id="emoji" name="emoji" maxlength="16"
+                            value="{{.Data.User.Emoji}}" class="input-cozy-sm" placeholder="e.g. 😺">
+                    <div class="form-hint">For this to work properly please use a single emoji! Defaults to 😺 if empty.</div>
+                </div>
 
-            <div class="field" style="margin-bottom:1em;">
-                <label for="headerMarkdown" class="form-label-sm">Header Markdown (optional)</label>
-                <textarea id="headerMarkdown" name="headerMarkdown" rows="8"
-                            class="input-cozy-sm"
-                            style="font-family:monospace; resize:vertical;"
-                            placeholder="Appears above all posts/pages">{{.Data.User.HeaderMarkdown}}</textarea>
-                <div class="form-hint">Supports basic markdown. Max 8000 chars.</div>
-            </div>
+                <div class="field" style="margin-bottom:1em;">
+                    <label for="blogTitle" class="form-label-sm">Blog Title (optional)</label>
+                    <input type="text" id="blogTitle" name="blogTitle" maxlength="120"
+                            value="{{.Data.User.BlogTitle}}" class="input-cozy-sm" placeholder="Defaults to username">
+                    <div class="form-hint">If empty, your username is used.</div>
+                </div>
 
-            <div class="field">
-                <label style="display:flex; align-items:center; gap:.5rem; cursor:pointer;">
-                    <input type="checkbox" id="showBacklinks" name="showBacklinks" 
-                           {{if .Data.User.ShowBacklinks}}checked{{end}}>
-                    <span class="form-label-sm" style="margin:0;">Show backlinks on my posts</span>
-                </label>
-                <div class="form-hint">When enabled, posts that link to your content will be listed at the bottom of each post.</div>
+                <div class="field" style="margin-bottom:1em;">
+                    <label for="headerMarkdown" class="form-label-sm">Header Markdown (optional)</label>
+                    <textarea id="headerMarkdown" name="headerMarkdown" rows="8"
+                                class="input-cozy-sm"
+                                style="font-family:monospace; resize:vertical;"
+                                placeholder="Appears above all posts/pages">{{.Data.User.HeaderMarkdown}}</textarea>
+                    <div class="form-hint">Supports basic markdown. Max 8000 chars.</div>
+                </div>
+
+                <div class="field">
+                    <label style="display:flex; align-items:center; gap:.5rem; cursor:pointer;">
+                        <input type="checkbox" id="showBacklinks" name="showBacklinks" 
+                               {{if .Data.User.ShowBacklinks}}checked{{end}}>
+                        <span class="form-label-sm" style="margin:0;">Show backlinks on my posts</span>
+                    </label>
+                    <div class="form-hint">When enabled, posts that link to your content will be listed at the bottom of each post.</div>
+                </div>
             </div>
         </div>
 
-        <div class="meta-card" style="margin:0 0 1.25rem;">
-            <div class="meta-section-heading">
-                <h4>Homepage</h4>
+        <!-- Appearance Tab -->
+        <div class="tab-content" data-tab="appearance">
+            <div class="meta-card" style="margin:0 0 1.25rem;">
+                <div class="meta-section-heading">
+                    <h4>Custom CSS</h4>
+                </div>
+                <div class="field" style="font-size:.8rem; line-height:1.45; margin-bottom:1em;">
+                    <p style="margin:.4rem 0;">
+                        Add custom CSS to style your public blog pages. This CSS will be applied to all your public pages (posts, archive, tag pages, etc.).
+                    </p>
+                    <p style="margin:.4rem 0;">
+                        <strong>Note:</strong> JavaScript is not allowed for security reasons. Only CSS will be applied.
+                    </p>
+                </div>
+                <div class="field" style="margin-bottom:1em;">
+                    <label for="customCSS" class="form-label-sm">Site Custom CSS (optional)</label>
+                    <textarea id="customCSS" name="customCSS" rows="16"
+                                class="input-cozy-sm"
+                                style="font-family:monospace; resize:vertical; font-size:.8rem;"
+                                placeholder="/* Your custom CSS here */&#10;body { }&#10;.post-content { }&#10;h1, h2, h3 { }&#10;a { }">{{.Data.User.CustomCSS}}</textarea>
+                    <div class="form-hint">Max 50,000 characters. Applied only to your public blog pages.</div>
+                </div>
             </div>
-            <div class="form-hint">
-                Select a published Page to show it instead of the post listing at
-                <code>/u/{{.Data.User.Username}}</code>.
-            </div>
-            <div class="post-details-columns">
-                <div class="col">
-                    <div class="field">
-                        <select id="homePagePostID" name="homePagePostID" class="input-cozy-sm">
-                            <option value="">-- Recent posts listing --</option>
-                            {{range .Data.Pages}}
-                            <option value="{{.ID}}" {{if uintPtrEq .ID $.Data.User.HomePagePostID}}selected{{end}}>
-                                {{.Title}}
-                            </option>
-                            {{end}}
-                        </select>
+        </div>
+
+        <!-- Homepage Tab -->
+        <div class="tab-content" data-tab="homepage">
+            <div class="meta-card" style="margin:0 0 1.25rem;">
+                <div class="meta-section-heading">
+                    <h4>Homepage</h4>
+                </div>
+                <div class="form-hint">
+                    Select a published Page to show it instead of the post listing at
+                    <code>/u/{{.Data.User.Username}}</code>.
+                </div>
+                <div class="post-details-columns">
+                    <div class="col">
+                        <div class="field">
+                            <select id="homePagePostID" name="homePagePostID" class="input-cozy-sm">
+                                <option value="">-- Recent posts listing --</option>
+                                {{range .Data.Pages}}
+                                <option value="{{.ID}}" {{if uintPtrEq .ID $.Data.User.HomePagePostID}}selected{{end}}>
+                                    {{.Title}}
+                                </option>
+                                {{end}}
+                            </select>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
-        <div class="post-editor-actions" style="display:flex; gap:.5rem; flex-wrap:wrap; margin:2rem 0 2rem;">
-            <a href="/dashboard" class="btn-cozy-secondary" style="text-decoration:none;line-height:100%;">← Back</a>
+
+        <!-- Data Tab -->
+        <div class="tab-content" data-tab="data">
+            <div class="meta-card" style="margin:0 0 1.25rem;">
+                <div class="meta-section-heading">
+                    <h4>Data Management</h4>
+                </div>
+                <div class="field" style="margin-bottom:1em;">
+                    <label class="form-label-sm">Import Posts</label>
+                    <div style="display:flex; gap:.5rem; align-items:center; margin-top:.5rem;">
+                        <a href="/dashboard/import" class="btn-cozy-secondary" style="text-decoration:none;line-height: 100%;">Import Posts</a>
+                    </div>
+                    <div class="form-hint">Import posts from JSON, RSS feeds, or other sources.</div>
+                </div>
+                
+                <div class="field" style="margin-bottom:1em;">
+                    <label class="form-label-sm">Export Posts</label>
+                    <div style="display:flex; gap:.5rem; align-items:center; margin-top:.5rem;">
+                        <button id="downloadPostsBtn" class="btn-cozy-secondary" type="button" style="line-height: 100%;">Export All Posts (JSON)</button>
+                    </div>
+                    <div class="form-hint">Download all your posts and pages as a JSON file for backup or migration.</div>
+                </div>
+
+                <div class="field" style="margin-bottom:2rem;">
+                    <label class="form-label-sm">API Access</label>
+                    <div class="api-inline" aria-label="API endpoint" style="margin-top:.5rem;">
+                        <strong style="font-size:.6rem; letter-spacing:.05em; text-transform:uppercase; opacity:.75;">GET</strong>
+                        <code>/api/v1/get-user-posts-messages/{{.Data.User.ID}}</code>
+                        <button id="copyApiBtn" type="button" aria-label="Copy endpoint">Copy</button>
+                        <a href="/api/v1/get-user-posts-messages/{{.Data.User.ID}}" target="_blank" class="btn-cozy-ghost" style="font-size:.55rem; text-decoration:none; padding:.25rem .55rem;">Open ↗</a>
+                    </div>
+                    <div class="form-hint">API endpoint to programmatically access all your posts and pages data.</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Save Button (appears in all tabs) -->
+        <div class="post-editor-actions" style="display:flex; gap:.5rem; flex-wrap:wrap; margin:1.5rem 0 2rem;">
+            <a href="/dashboard" class="btn-cozy-secondary" style="text-decoration:none;line-height:100%;">&#8592; Back</a>
             <button type="submit" class="btn-cozy">Save Settings</button>
             <a href="/u/{{ pathEscape .Data.User.Username }}" target="_blank" class="btn-cozy-ghost" style="text-decoration:none;">
                 View Public Site
             </a>
         </div>
-        <hr/>
-        <div class="meta-card" style="margin:2rem 0 1.25rem;">
-            <div class="meta-section-heading">
-                <h4>Data Management</h4>
-            </div>
-            <div class="field" style="margin-bottom:1em;">
-                <label class="form-label-sm">Import Posts</label>
-                <div style="display:flex; gap:.5rem; align-items:center; margin-top:.5rem;">
-                    <a href="/dashboard/import" class="btn-cozy-secondary" style="text-decoration:none;line-height: 100%;">Import Posts</a>
-                </div>
-                <div class="form-hint">Import posts from JSON, RSS feeds, or other sources.</div>
-            </div>
-            
-            <div class="field" style="margin-bottom:1em;">
-                <label class="form-label-sm">Export Posts</label>
-                <div style="display:flex; gap:.5rem; align-items:center; margin-top:.5rem;">
-                    <button id="downloadPostsBtn" class="btn-cozy-secondary" type="button" style="line-height: 100%;">Export All Posts (JSON)</button>
-                </div>
-                <div class="form-hint">Download all your posts and pages as a JSON file for backup or migration.</div>
-            </div>
-
-            <div class="field" style="margin-bottom:2rem;">
-                <label class="form-label-sm">API Access</label>
-                <div class="api-inline" aria-label="API endpoint" style="margin-top:.5rem;">
-                    <strong style="font-size:.6rem; letter-spacing:.05em; text-transform:uppercase; opacity:.75;">GET</strong>
-                    <code>/api/v1/get-user-posts-messages/{{.Data.User.ID}}</code>
-                    <button id="copyApiBtn" type="button" aria-label="Copy endpoint">Copy</button>
-                    <a href="/api/v1/get-user-posts-messages/{{.Data.User.ID}}" target="_blank" class="btn-cozy-ghost" style="font-size:.55rem; text-decoration:none; padding:.25rem .55rem;">Open ↗</a>
-                </div>
-                <div class="form-hint">API endpoint to programmatically access all your posts and pages data.</div>
-            </div>
-        </div>
     </form>
 
-    <hr/>   
-
-    <div class="danger-zone-card">
-        <div class="meta-section-heading">
-            <h4>Danger Zone</h4>
+    <!-- Danger Zone Tab (outside main form) -->
+    <div class="tab-content" data-tab="danger">
+        <div class="danger-zone-card">
+            <div class="meta-section-heading">
+                <h4>Danger Zone</h4>
+            </div>
+            <p class="form-hint" style="font-size:.6rem; max-width:560px;">
+                Permanently delete your account and all posts/pages. This cannot be undone. Previously exported data you saved locally is unaffected.
+            </p>
+            <form method="post" action="/dashboard/delete-account" style="margin:0; display:flex; flex-direction:column; gap:.6rem; max-width:460px;">
+                {{ .Global.CSRFField }}
+                <label for="deleteConfirmInput" class="form-label-sm">Type your username to confirm deletion</label>
+                <input id="deleteConfirmInput" name="confirm" type="text"
+                       placeholder="{{ .Data.User.Username }}" autocomplete="off"
+                       class="input-cozy-sm" style="max-width:320px;">
+                <div style="display:flex; gap:.6rem; align-items:center;">
+                  <button id="deleteAccountBtn" type="submit"
+                          class="btn-cozy btn-danger"
+                          disabled
+                          style="flex:0 0 auto;">
+                      Delete Account Permanently
+                  </button>
+                </div>
+                <div class="form-hint" style="font-size:.55rem;">
+                    Irreversible: all posts/pages removed immediately.
+                </div>
+            </form>
         </div>
-        <p class="form-hint" style="font-size:.6rem; max-width:560px;">
-            Permanently delete your account and all posts/pages. This cannot be undone. Previously exported data you saved locally is unaffected.
-        </p>
-        <form method="post" action="/dashboard/delete-account" style="margin:0; display:flex; flex-direction:column; gap:.6rem; max-width:460px;">
-            {{ .Global.CSRFField }}
-            <label for="deleteConfirmInput" class="form-label-sm">Type your username to confirm deletion</label>
-            <input id="deleteConfirmInput" name="confirm" type="text"
-                   placeholder="{{ .Data.User.Username }}" autocomplete="off"
-                   class="input-cozy-sm" style="max-width:320px;">
-            <div style="display:flex; gap:.6rem; align-items:center;">
-              <button id="deleteAccountBtn" type="submit"
-                      class="btn-cozy btn-danger"
-                      disabled
-                      style="flex:0 0 auto;">
-                  Delete Account Permanently
-              </button>
-            </div>
-            <div class="form-hint" style="font-size:.55rem;">
-                Irreversible: all posts/pages removed immediately.
-            </div>
-        </form>
     </div>
 </div>
 {{end}}
 
 {{define "scripts"}}
 <script>
+  // Tab switching
+  (function() {
+    const tabs = document.querySelectorAll('.tab-btn');
+    const contents = document.querySelectorAll('.tab-content');
+    
+    // Load saved tab from URL hash or localStorage
+    const savedTab = window.location.hash.slice(1) || localStorage.getItem('settingsTab') || 'general';
+    
+    function switchTab(tabName) {
+      tabs.forEach(t => t.classList.remove('active'));
+      contents.forEach(c => c.classList.remove('active'));
+      
+      document.querySelectorAll('[data-tab="' + tabName + '"]').forEach(el => {
+        el.classList.add('active');
+      });
+      
+      localStorage.setItem('settingsTab', tabName);
+      history.replaceState(null, '', '#' + tabName);
+    }
+    
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => switchTab(tab.dataset.tab));
+    });
+    
+    // Initialize with saved tab
+    if (document.querySelector('[data-tab="' + savedTab + '"]')) {
+      switchTab(savedTab);
+    }
+  })();
+
   // Export button
   document.getElementById('downloadPostsBtn').addEventListener('click', function () {
       const userId = "{{.Data.User.ID}}";
-      const url = `/api/v1/get-user-posts-messages/${userId}`;
+      const url = '/api/v1/get-user-posts-messages/' + userId;
       fetch(url)
           .then(r => r.json())
           .then(data => {
@@ -275,7 +421,7 @@
               const objUrl = URL.createObjectURL(blob);
               const a = document.createElement('a');
               a.href = objUrl;
-              a.download = `kitty_user_posts_${userId}.json`;
+              a.download = 'kitty_user_posts_' + userId + '.json';
               document.body.appendChild(a);
               a.click();
               a.remove();
@@ -288,7 +434,7 @@
   const copyBtn = document.getElementById('copyApiBtn');
   if (copyBtn) {
     copyBtn.addEventListener('click', () => {
-      const text = `/api/v1/get-user-posts-messages/{{.Data.User.ID}}`;
+      const text = '/api/v1/get-user-posts-messages/{{.Data.User.ID}}';
       navigator.clipboard.writeText(text).then(() => {
         copyBtn.textContent = 'Copied!';
         setTimeout(() => copyBtn.textContent = 'Copy', 1600);

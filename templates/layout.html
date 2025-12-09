@@ -15,6 +15,9 @@
     {{end}}
 
     {{block "styles" .}}{{end}}
+    {{if .Global.CustomCSS}}
+    <style type="text/css">{{.Global.CustomCSS}}</style>
+    {{end}}
 </head>
 
 <body>

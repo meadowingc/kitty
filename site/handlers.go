@@ -736,6 +736,7 @@ func UserSettings(w http.ResponseWriter, r *http.Request) {
 		headerMarkdown := r.FormValue("headerMarkdown")
 		homePagePostIDStr := strings.TrimSpace(r.FormValue("homePagePostID"))
 		emoji := strings.TrimSpace(r.FormValue("emoji"))
+		customCSS := r.FormValue("customCSS")
 
 		if len(blogTitle) > 120 {
 			http.Error(w, "Blog title too long (max 120 chars)", http.StatusBadRequest)
@@ -743,6 +744,10 @@ func UserSettings(w http.ResponseWriter, r *http.Request) {
 		}
 		if len(headerMarkdown) > 8000 {
 			http.Error(w, "Header markdown too long (max 8000 chars)", http.StatusBadRequest)
+			return
+		}
+		if len(customCSS) > 50000 {
+			http.Error(w, "Custom CSS too long (max 50000 chars)", http.StatusBadRequest)
 			return
 		}
 
@@ -755,6 +760,7 @@ func UserSettings(w http.ResponseWriter, r *http.Request) {
 		}
 		user.Emoji = emoji
 		user.ShowBacklinks = r.FormValue("showBacklinks") == "on"
+		user.CustomCSS = customCSS
 
 		if homePagePostIDStr == "" {
 			user.HomePagePostID = nil
