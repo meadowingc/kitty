@@ -123,10 +123,18 @@
         <div id="bodyEditorShell">
             <div class="editor-header">
                 <span>Body{{if $isEditing}} (auto-save enabled){{else}} (manual save){{end}}</span>
-                <button type="button" class="fullscreen-toggle" id="fullscreenToggle">
-                    <span class="fullscreen-icon">⛶</span>
-                    <span class="fullscreen-text">Fullscreen</span>
-                </button>
+                <div class="editor-header-actions">
+                    <button type="button" class="undo-redo-btn" id="undoBtn" title="Undo">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6.36 2.64L3 13"/></svg>
+                    </button>
+                    <button type="button" class="undo-redo-btn" id="redoBtn" title="Redo">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 7v6h-6"/><path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6.36 2.64L21 13"/></svg>
+                    </button>
+                    <button type="button" class="fullscreen-toggle" id="fullscreenToggle">
+                        <span class="fullscreen-icon">⛶</span>
+                        <span class="fullscreen-text">Fullscreen</span>
+                    </button>
+                </div>
             </div>
             <div id="bodyEditor"></div>
             <textarea name="body" id="body" hidden>{{if $isEditing}}{{.Data.Body}}{{end}}</textarea>
@@ -218,6 +226,24 @@ window.addEventListener('load', function () {
     }
 
     fullscreenToggle.addEventListener('click', toggleFullscreen);
+
+    // Undo/Redo button functionality
+    const undoBtn = document.getElementById('undoBtn');
+    const redoBtn = document.getElementById('redoBtn');
+    
+    undoBtn.addEventListener('click', function() {
+        if (otEditor && otEditor.focus) {
+            otEditor.focus();
+        }
+        document.execCommand('undo', false, null);
+    });
+    
+    redoBtn.addEventListener('click', function() {
+        if (otEditor && otEditor.focus) {
+            otEditor.focus();
+        }
+        document.execCommand('redo', false, null);
+    });
 
     // Keyboard shortcuts for fullscreen
     document.addEventListener('keydown', function(e) {

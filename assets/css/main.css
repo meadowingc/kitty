@@ -746,6 +746,42 @@ body.fullscreen-mode #bodyEditor {
   gap: 0.35rem;
 }
 
+.editor-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.undo-redo-btn {
+  display: none; /* Hidden by default on desktop */
+  cursor: pointer;
+  padding: 0.4rem;
+  border-radius: 0.5rem;
+  background: transparent;
+  border: 1px solid var(--cozy-brown-300);
+  color: var(--cozy-brown-700);
+  transition: all 0.2s ease;
+  align-items: center;
+  justify-content: center;
+}
+
+.undo-redo-btn:hover {
+  background: var(--cozy-brown-100);
+  border-color: var(--cozy-brown-400);
+}
+
+.undo-redo-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Show undo/redo only on mobile/touch devices */
+@media (max-width: 768px) {
+  .undo-redo-btn {
+    display: inline-flex;
+  }
+}
+
 .fullscreen-toggle:hover {
   background: var(--cozy-brown-100);
   border-color: var(--cozy-brown-400);
@@ -786,6 +822,16 @@ body.fullscreen-mode .editor-header {
   }
 
   .fullscreen-toggle:hover {
+    background: var(--cozy-brown-700);
+    border-color: var(--cozy-brown-500);
+  }
+
+  .undo-redo-btn {
+    border-color: var(--cozy-brown-600);
+    color: var(--cozy-brown-200);
+  }
+
+  .undo-redo-btn:hover {
     background: var(--cozy-brown-700);
     border-color: var(--cozy-brown-500);
   }
