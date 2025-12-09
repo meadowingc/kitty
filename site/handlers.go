@@ -456,18 +456,9 @@ func CreatePost(w http.ResponseWriter, r *http.Request) {
 
 // CheckPostUpdatedAt returns the current UpdatedAt timestamp for a post (for staleness detection)
 func CheckPostUpdatedAt(w http.ResponseWriter, r *http.Request) {
-	postID := chi.URLParam(r, "postID")
-
-	var post database.Post
-	result := database.GetDB().First(&post, postID)
-	if result.Error != nil {
-		http.Error(w, "Post not found", http.StatusNotFound)
-		return
-	}
-
-	currentUser := getSignedInUserOrFail(r)
-	if post.AdminUserID != currentUser.ID {
-		http.Error(w, "You don't own this post", http.StatusUnauthorized)
+	post := getPostFromContext(r)
+	if post == nil {
+		http.Error(w, "Post not found in context", http.StatusInternalServerError)
 		return
 	}
 
@@ -479,24 +470,18 @@ func CheckPostUpdatedAt(w http.ResponseWriter, r *http.Request) {
 
 func UpdatePost(w http.ResponseWriter, r *http.Request) {
 	postID := chi.URLParam(r, "postID")
-
-	var post database.Post
-	result := database.GetDB().First(&post, postID)
-	if result.Error != nil {
-		http.Error(w, "Post not found", http.StatusNotFound)
+	post := getPostFromContext(r)
+	if post == nil {
+		http.Error(w, "Post not found in context", http.StatusInternalServerError)
 		return
 	}
 
 	currentUser := getSignedInUserOrFail(r)
-	if post.AdminUserID != currentUser.ID {
-		http.Error(w, "You don't own this post", http.StatusUnauthorized)
-		return
-	}
 
 	switch r.Method {
 	case "GET":
 		data := createEditData{
-			Post:           post,
+			Post:           *post,
 			TagSuggestions: collectUserTags(currentUser.ID),
 		}
 		RenderTemplate(w, r, "dashboard/create_edit_post", data)
@@ -552,7 +537,7 @@ func UpdatePost(w http.ResponseWriter, r *http.Request) {
 		post.Tags = newPostData.Tags
 		post.Published = newPostData.Published
 
-		result = database.GetDB().Save(&post)
+		result := database.GetDB().Save(post)
 		if result.Error != nil {
 			http.Error(w, "Error updating guestbook", http.StatusInternalServerError)
 			return
@@ -580,24 +565,17 @@ func UpdatePost(w http.ResponseWriter, r *http.Request) {
 }
 
 func DeletePost(w http.ResponseWriter, r *http.Request) {
-	postID := chi.URLParam(r, "postID")
-
-	var post database.Post
-	result := database.GetDB().First(&post, postID)
-	if result.Error != nil {
-		http.Error(w, "Post not found", http.StatusNotFound)
+	post := getPostFromContext(r)
+	if post == nil {
+		http.Error(w, "Post not found in context", http.StatusInternalServerError)
 		return
 	}
 
 	currentUser := getSignedInUserOrFail(r)
-	if post.AdminUserID != currentUser.ID {
-		http.Error(w, "You don't own this post", http.StatusUnauthorized)
-		return
-	}
 
 	switch r.Method {
 	case "POST":
-		result = database.GetDB().Delete(&post)
+		result := database.GetDB().Delete(post)
 		if result.Error != nil {
 			http.Error(w, "Error deleting post", http.StatusInternalServerError)
 			return
@@ -750,6 +728,8 @@ func UserSettings(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Custom CSS too long (max 50000 chars)", http.StatusBadRequest)
 			return
 		}
+		// Sanitize CSS to prevent XSS via style tag breakout or JS execution
+		customCSS = sanitizeCustomCSS(customCSS)
 
 		// update fields
 		user.BlogTitle = blogTitle

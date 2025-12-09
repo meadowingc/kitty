@@ -138,9 +138,12 @@ func initRouter() *chi.Mux {
 		r.HandleFunc("/import", site.ImportPosts)
 
 		r.HandleFunc("/post/new", site.CreatePost)
-		r.HandleFunc("/post/{postID}", site.UpdatePost)
-		r.Get("/post/{postID}/check", site.CheckPostUpdatedAt)
-		r.HandleFunc("/post/{postID}/delete", site.DeletePost)
+
+		// Routes that require post ownership validation
+		r.With(site.PostOwnershipMiddleware).HandleFunc("/post/{postID}", site.UpdatePost)
+		r.With(site.PostOwnershipMiddleware).Get("/post/{postID}/check", site.CheckPostUpdatedAt)
+		r.With(site.PostOwnershipMiddleware).HandleFunc("/post/{postID}/delete", site.DeletePost)
+
 		r.HandleFunc("/settings", site.UserSettings)
 		r.HandleFunc("/delete-account", site.UserDeleteAccount)
 	})

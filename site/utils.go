@@ -11,6 +11,7 @@ import (
 	"kitty/database"
 	"log"
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -149,4 +150,45 @@ func setViewingUserInContext(r *http.Request, user *database.AdminUser) *http.Re
 func getViewingUserFromContext(r *http.Request) *database.AdminUser {
 	user, _ := r.Context().Value(viewingUserKey).(*database.AdminUser)
 	return user
+}
+
+// sanitizeCustomCSS removes potentially dangerous content from user CSS
+// to prevent XSS attacks via style tag breakout or CSS-based JS execution
+func sanitizeCustomCSS(css string) string {
+	// Remove null bytes which could be used to bypass filters
+	css = strings.ReplaceAll(css, "\x00", "")
+
+	// Case-insensitive patterns for dangerous content
+	// 1. Style/script tag injection attempts
+	closeStyleRe := regexp.MustCompile(`(?i)<\s*/\s*style`)
+	css = closeStyleRe.ReplaceAllString(css, "")
+
+	openTagRe := regexp.MustCompile(`(?i)<\s*(script|style|iframe|object|embed|link|meta|base)`)
+	css = openTagRe.ReplaceAllString(css, "")
+
+	// 2. JavaScript URL protocol (can appear in url() values)
+	jsProtocolRe := regexp.MustCompile(`(?i)javascript\s*:`)
+	css = jsProtocolRe.ReplaceAllString(css, "")
+
+	// 3. Data URLs with dangerous mime types
+	dataScriptRe := regexp.MustCompile(`(?i)data\s*:\s*(text/html|application/x|text/javascript)`)
+	css = dataScriptRe.ReplaceAllString(css, "data:blocked")
+
+	// 4. Legacy IE expression() which can execute JS
+	expressionRe := regexp.MustCompile(`(?i)expression\s*\(`)
+	css = expressionRe.ReplaceAllString(css, "blocked(")
+
+	// 5. Firefox -moz-binding (can load XBL with JS)
+	mozBindingRe := regexp.MustCompile(`(?i)-moz-binding\s*:`)
+	css = mozBindingRe.ReplaceAllString(css, "-blocked:")
+
+	// 6. IE behavior property
+	behaviorRe := regexp.MustCompile(`(?i)behavior\s*:`)
+	css = behaviorRe.ReplaceAllString(css, "blocked:")
+
+	// 7. @import with javascript or data URLs
+	importJsRe := regexp.MustCompile(`(?i)@import[^;]*javascript\s*:`)
+	css = importJsRe.ReplaceAllString(css, "@import url(blocked)")
+
+	return css
 }

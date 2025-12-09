@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/gorilla/csrf"
 )
 
@@ -98,6 +99,48 @@ func PlaintextCSRFMiddleware(next http.Handler) http.Handler {
 		}
 		next.ServeHTTP(w, r)
 	})
+}
+
+// postContextKey is used to store the validated post in request context
+type postContextKeyType struct{}
+
+var postContextKey postContextKeyType
+
+// PostOwnershipMiddleware validates that the current user owns the post specified
+// by the {postID} URL parameter. If valid, it stores the post in the request context.
+// Use getPostFromContext() in handlers to retrieve it.
+func PostOwnershipMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		postID := chi.URLParam(r, "postID")
+		if postID == "" {
+			http.Error(w, "Post ID required", http.StatusBadRequest)
+			return
+		}
+
+		var post database.Post
+		result := database.GetDB().First(&post, postID)
+		if result.Error != nil {
+			http.Error(w, "Post not found", http.StatusNotFound)
+			return
+		}
+
+		currentUser := getSignedInUserOrNil(r)
+		if currentUser == nil || post.AdminUserID != currentUser.ID {
+			http.Error(w, "You don't own this post", http.StatusUnauthorized)
+			return
+		}
+
+		// Store post and user in context for handlers
+		ctx := context.WithValue(r.Context(), postContextKey, &post)
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
+// getPostFromContext retrieves the post validated by PostOwnershipMiddleware.
+// Returns nil if not present (middleware not applied or failed).
+func getPostFromContext(r *http.Request) *database.Post {
+	post, _ := r.Context().Value(postContextKey).(*database.Post)
+	return post
 }
 
 // NoCacheForHTML adds strict no-cache headers for HTML responses to avoid
