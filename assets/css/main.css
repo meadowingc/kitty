@@ -650,25 +650,19 @@ footer {
   border-top: 1px dashed var(--cozy-brown-200);
 }
 
-.save-flash {
-  position: fixed;
-  top: 1.25rem;
-  right: 1.25rem;
-  background: var(--cozy-green-500);
-  color: #fff;
-  padding: 0.6rem 0.9rem;
-  border-radius: 0.75rem;
-  font-size: 0.75rem;
-  box-shadow: 0 4px 10px -2px rgba(0, 0, 0, 0.2);
+.save-indicator {
+  display: inline-block;
+  margin-left: 0.5rem;
+  color: var(--cozy-green-600);
+  font-size: 0.8rem;
   opacity: 0;
-  transform: translateY(-8px);
-  transition: opacity 0.5s, transform 0.4s;
-  pointer-events: none;
-  z-index: 50;
+  transform: scale(0.5);
+  transition: opacity 0.2s ease, transform 0.2s ease;
 }
-.save-flash.show {
+
+.save-indicator.show {
   opacity: 1;
-  transform: translateY(0);
+  transform: scale(1);
 }
 
 @media (max-width: 600px) {

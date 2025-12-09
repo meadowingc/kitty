@@ -122,7 +122,7 @@
 
         <div id="bodyEditorShell">
             <div class="editor-header">
-                <span>Body{{if $isEditing}} (auto-save enabled){{else}} (manual save){{end}}</span>
+                <span>{{if $isEditing}}(auto-save){{else}}(manual save needed){{end}}<span id="saveIndicator" class="save-indicator">✓</span></span>
                 <div class="editor-header-actions">
                     <button type="button" class="undo-redo-btn" id="undoBtn" title="Undo">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6.36 2.64L3 13"/></svg>
@@ -141,7 +141,6 @@
         </div>
     </form>
 </div>
-<div id="saveMessage" class="save-flash">{{if $isPage}}Page{{else}}Post{{end}} saved!</div>
 {{end}}
 
 {{define "scripts"}}
@@ -347,7 +346,6 @@ window.addEventListener('load', function () {
         const editHeading = document.getElementById('editHeading');
         const submitBtn = document.getElementById('submitButton');
         const detailsHeading = document.getElementById('detailsHeading');
-        const saveMsg = document.getElementById('saveMessage');
         if(editHeading){
             const base = isEditing ? (isPage ? 'Edit Page' : 'Edit Post') : (isPage ? 'New Page' : 'New Post');
             editHeading.textContent = base;
@@ -358,12 +356,6 @@ window.addEventListener('load', function () {
         }
         if(detailsHeading){
             detailsHeading.textContent = (isPage ? 'Page' : 'Post') + ' Details';
-        }
-        if(saveMsg){
-            const txt = (isPage ? 'Page' : 'Post') + ' saved!';
-            if(saveMsg.textContent.trim() !== txt){
-                saveMsg.textContent = txt;
-            }
         }
     }
     isPageCheckbox.addEventListener('change', updateWording);
@@ -404,10 +396,10 @@ window.addEventListener('load', function () {
     }
 
     function showSaveMessage() {
-        const message = document.getElementById('saveMessage');
-        message.classList.add('show');
-        clearTimeout(message._t);
-        message._t = setTimeout(() => message.classList.remove('show'), 2500);
+        const indicator = document.getElementById('saveIndicator');
+        indicator.classList.add('show');
+        clearTimeout(indicator._t);
+        indicator._t = setTimeout(() => indicator.classList.remove('show'), 1500);
     }
 
     document.addEventListener('keydown', function (e) {
