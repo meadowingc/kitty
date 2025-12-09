@@ -454,6 +454,29 @@ func CreatePost(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// CheckPostUpdatedAt returns the current UpdatedAt timestamp for a post (for staleness detection)
+func CheckPostUpdatedAt(w http.ResponseWriter, r *http.Request) {
+	postID := chi.URLParam(r, "postID")
+
+	var post database.Post
+	result := database.GetDB().First(&post, postID)
+	if result.Error != nil {
+		http.Error(w, "Post not found", http.StatusNotFound)
+		return
+	}
+
+	currentUser := getSignedInUserOrFail(r)
+	if post.AdminUserID != currentUser.ID {
+		http.Error(w, "You don't own this post", http.StatusUnauthorized)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]int64{
+		"updatedAt": post.UpdatedAt.Unix(),
+	})
+}
+
 func UpdatePost(w http.ResponseWriter, r *http.Request) {
 	postID := chi.URLParam(r, "postID")
 
@@ -479,6 +502,23 @@ func UpdatePost(w http.ResponseWriter, r *http.Request) {
 		RenderTemplate(w, r, "dashboard/create_edit_post", data)
 
 	case "POST":
+		// Check for optimistic locking conflict
+		expectedUpdatedAtStr := r.FormValue("expectedUpdatedAt")
+		if expectedUpdatedAtStr != "" && expectedUpdatedAtStr != "0" {
+			expectedUpdatedAt, err := strconv.ParseInt(expectedUpdatedAtStr, 10, 64)
+			if err == nil && expectedUpdatedAt > 0 {
+				if post.UpdatedAt.Unix() > expectedUpdatedAt {
+					// Conflict: server has newer version
+					w.Header().Set("Content-Type", "application/json")
+					w.WriteHeader(http.StatusConflict)
+					json.NewEncoder(w).Encode(map[string]int64{
+						"updatedAt": post.UpdatedAt.Unix(),
+					})
+					return
+				}
+			}
+		}
+
 		newPostData, e := buildPostFromFormRequest(r)
 		if e != nil {
 			http.Error(w, "Error updating post: "+e.Error(), http.StatusInternalServerError)
@@ -524,6 +564,13 @@ func UpdatePost(w http.ResponseWriter, r *http.Request) {
 			post.ID = postID
 			_ = ExtractAndSaveBacklinks(&post)
 		}(post.ID, post.Body)
+
+		// For AJAX requests, return the new timestamp; for form submissions, redirect
+		if r.Header.Get("Accept") == "application/json" || r.Header.Get("X-Requested-With") == "XMLHttpRequest" {
+			w.Header().Set("X-Updated-At", strconv.FormatInt(post.UpdatedAt.Unix(), 10))
+			w.WriteHeader(http.StatusOK)
+			return
+		}
 
 		http.Redirect(w, r, "/dashboard/post/"+postID, http.StatusSeeOther)
 

@@ -36,6 +36,9 @@ func GetDB() *gorm.DB {
 }
 
 func CloseDB() {
+	if db == nil {
+		return
+	}
 	sqlDB, err := db.DB()
 	if err != nil {
 		log.Printf("Error on closing database connection: %v", err)
@@ -44,4 +47,5 @@ func CloseDB() {
 			log.Printf("Error on closing database connection: %v", err)
 		}
 	}
+	db = nil // Reset so GetDB() will reinitialize (used in tests)
 }

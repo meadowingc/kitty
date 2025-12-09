@@ -39,6 +39,9 @@ func setupTestEnvironment(t *testing.T) {
 		os.Chdir("tests")
 	})
 
+	// Close any existing database connection first
+	database.CloseDB()
+
 	// Remove existing test database
 	os.Remove("tests/" + testDBPath)
 	os.Remove("tests/" + testDBPath + "-shm")
@@ -104,6 +107,7 @@ func startTestServer(t *testing.T) {
 		r.HandleFunc("/import", site.ImportPosts)
 		r.HandleFunc("/post/new", site.CreatePost)
 		r.HandleFunc("/post/{postID}", site.UpdatePost)
+		r.Get("/post/{postID}/check", site.CheckPostUpdatedAt)
 		r.HandleFunc("/post/{postID}/delete", site.DeletePost)
 		r.HandleFunc("/settings", site.UserSettings)
 		r.HandleFunc("/delete-account", site.UserDeleteAccount)
@@ -174,6 +178,8 @@ func signInUser(t *testing.T, username, password string) *TestUser {
 	page.MustElement("#password").MustInput(password)
 	page.MustElement("button[type=submit]").MustClick()
 
+	// Wait for the form submission and redirect to complete
+	time.Sleep(500 * time.Millisecond)
 	page.MustWaitLoad()
 
 	return &TestUser{

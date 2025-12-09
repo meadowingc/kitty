@@ -844,6 +844,53 @@ body.fullscreen-mode .editor-header {
   }
 }
 
+/* --- Stale Content Warning Banner --- */
+#staleBanner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: #fef3cd;
+  border-bottom: 2px solid #ffc107;
+  padding: 1rem;
+  z-index: 10000;
+  text-align: center;
+  font-weight: 500;
+}
+
+#staleBanner button {
+  margin-left: 1rem;
+  padding: 0.25rem 0.75rem;
+  cursor: pointer;
+  border-radius: 0.5rem;
+  border: 1px solid var(--cozy-brown-300);
+  background: var(--cozy-warmwhite);
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+#staleBanner button:hover {
+  background: var(--cozy-brown-100);
+}
+
+@media (prefers-color-scheme: dark) {
+  #staleBanner {
+    background: #664d03;
+    border-bottom-color: #997404;
+    color: #fff3cd;
+  }
+
+  #staleBanner button {
+    background: var(--cozy-brown-700);
+    border-color: var(--cozy-brown-500);
+    color: var(--cozy-brown-100);
+  }
+
+  #staleBanner button:hover {
+    background: var(--cozy-brown-600);
+  }
+}
+
 /* --- Dashboard Tabs --- */
 .tabs {
   display: flex;

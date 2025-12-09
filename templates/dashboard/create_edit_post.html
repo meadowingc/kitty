@@ -1,6 +1,10 @@
 {{template "layout.html" .}}
 
-{{define "title"}}Manage {{if and .Data .Data.IsPage}}Page{{else}}Post{{end}}{{end}}
+{{define "title"}}
+{{$isEditing := (and .Data (or .Data.ID false))}}
+{{$isPage := (and .Data .Data.IsPage)}}
+{{if $isEditing}}Edit{{else}}New{{end}} {{if $isPage}}Page{{else}}Post{{end}} - {{if $isEditing}}{{.Data.Title}}{{end}}
+{{end}}
 
 {{define "styles"}}{{end}}
 
@@ -25,6 +29,9 @@
 
     <form id="postEditForm" action="{{ $formActionUrl }}" method="post" style="margin:0;">
         {{ .Global.CSRFField }}
+        {{ if $isEditing }}
+        <input type="hidden" id="expectedUpdatedAt" name="expectedUpdatedAt" value="{{ .Data.UpdatedAt.Unix }}">
+        {{ end }}
         <div class="post-editor-actions" style="margin:0 0 1rem; display:flex; gap:.5rem; flex-wrap:wrap;">
             <a href="/dashboard" class="btn-cozy-secondary" style="text-decoration:none;line-height: 100%;">← Back</a>
             <input id="submitButton" type="submit" class="btn-cozy" value="{{if $isEditing}}{{if $isPage}}Update Page{{else}}Update Post{{end}}{{else}}{{if $isPage}}Create Page{{else}}Create Post{{end}}{{end}}">
@@ -152,6 +159,9 @@
 window.addEventListener('load', function () {
     let saveTimeout;
     const isEditing = {{if $isEditing}}true{{else}}false{{end}};
+    const postId = {{if $isEditing}}{{.Data.ID}}{{else}}null{{end}};
+    let serverUpdatedAt = {{if $isEditing}}{{.Data.UpdatedAt.Unix}}{{else}}null{{end}};
+    let isStale = false;
 
     // OverType integration
     const hiddenTextarea = document.getElementById('body');
@@ -362,8 +372,73 @@ window.addEventListener('load', function () {
     updateWording();
 
     {{ if $isEditing }}
+    // Staleness detection - check if server has newer version
+    async function checkForStaleness() {
+        if (!isEditing || !postId) return;
+        try {
+            const response = await fetch('/dashboard/post/' + postId + '/check', {
+                method: 'GET',
+                headers: { 'Accept': 'application/json' }
+            });
+            if (response.ok) {
+                const data = await response.json();
+                if (data.updatedAt > serverUpdatedAt) {
+                    showStaleWarning(data.updatedAt);
+                }
+            }
+        } catch (e) {
+            console.error('Staleness check failed:', e);
+        }
+    }
+
+    function showStaleWarning(newTimestamp) {
+        if (isStale) return; // Already showing warning
+        isStale = true;
+        
+        // Create warning banner
+        const banner = document.createElement('div');
+        banner.id = 'staleBanner';
+        banner.innerHTML = `
+            <span>⚠️ This {{if $isPage}}page{{else}}post{{end}} was modified elsewhere. Your local changes may overwrite newer content.</span>
+            <button onclick="location.reload()">Reload from server</button>
+            <button onclick="dismissStaleWarning()">Keep my changes</button>
+        `;
+        document.body.prepend(banner);
+        
+        // Disable auto-save while stale
+        clearTimeout(saveTimeout);
+    }
+
+    window.dismissStaleWarning = function() {
+        const banner = document.getElementById('staleBanner');
+        if (banner) banner.remove();
+        isStale = false;
+        // Update expectedUpdatedAt to allow saving (user chose to overwrite)
+        const hiddenInput = document.getElementById('expectedUpdatedAt');
+        if (hiddenInput) hiddenInput.value = '0'; // 0 means "force save"
+    };
+
+    // Check for staleness on visibility change (tab focus, wake from sleep)
+    document.addEventListener('visibilitychange', function() {
+        if (document.visibilityState === 'visible' && !isStale) {
+            checkForStaleness();
+        }
+    });
+
+    // Also check on window focus (covers more cases)
+    window.addEventListener('focus', function() {
+        if (!isStale) {
+            checkForStaleness();
+        }
+    });
+
     // autosave functionality
     function triggerSave() {
+        if (isStale) {
+            console.log('Skipping auto-save: content is stale');
+            return;
+        }
+        
         const form = document.querySelector('form#postEditForm');
         const formData = new FormData(form);
 
@@ -377,7 +452,21 @@ window.addEventListener('load', function () {
         })
         .then(response => {
             if (response.ok) {
+                // Update the expectedUpdatedAt from response header
+                const newTimestamp = response.headers.get('X-Updated-At');
+                if (newTimestamp) {
+                    serverUpdatedAt = parseInt(newTimestamp, 10);
+                    const hiddenInput = document.getElementById('expectedUpdatedAt');
+                    if (hiddenInput) hiddenInput.value = newTimestamp;
+                }
                 showSaveMessage();
+            } else if (response.status === 409) {
+                // Conflict - server has newer version
+                response.json().then(data => {
+                    showStaleWarning(data.updatedAt);
+                }).catch(() => {
+                    showStaleWarning(Date.now() / 1000);
+                });
             } else {
                 response.text().then(errorMessage => {
                     console.error('Save failed:', errorMessage);
