@@ -162,6 +162,7 @@ window.addEventListener('load', function () {
     const postId = {{if $isEditing}}{{.Data.ID}}{{else}}null{{end}};
     let serverUpdatedAt = {{if $isEditing}}{{.Data.UpdatedAt.Unix}}{{else}}null{{end}};
     let isStale = false;
+    let isSaving = false; // Prevent staleness checks during save
 
     // OverType integration
     const hiddenTextarea = document.getElementById('body');
@@ -374,7 +375,7 @@ window.addEventListener('load', function () {
     {{ if $isEditing }}
     // Staleness detection - check if server has newer version
     async function checkForStaleness() {
-        if (!isEditing || !postId) return;
+        if (!isEditing || !postId || isSaving) return; // Skip if currently saving
         try {
             const response = await fetch('/dashboard/post/' + postId + '/check', {
                 method: 'GET',
@@ -382,7 +383,8 @@ window.addEventListener('load', function () {
             });
             if (response.ok) {
                 const data = await response.json();
-                if (data.updatedAt > serverUpdatedAt) {
+                // Double-check we're not in the middle of a save
+                if (!isSaving && data.updatedAt > serverUpdatedAt) {
                     showStaleWarning(data.updatedAt);
                 }
             }
@@ -439,6 +441,8 @@ window.addEventListener('load', function () {
             return;
         }
         
+        isSaving = true; // Prevent staleness checks during save
+        
         const form = document.querySelector('form#postEditForm');
         const formData = new FormData(form);
 
@@ -481,6 +485,9 @@ window.addEventListener('load', function () {
         })
         .catch(error => {
             console.error('Save error:', error);
+        })
+        .finally(() => {
+            isSaving = false; // Allow staleness checks again
         });
     }
 

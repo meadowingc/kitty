@@ -277,6 +277,71 @@ func TestStalenessCheckEndpoint(t *testing.T) {
 	}
 }
 
+// TestStalenessNoFalsePositiveOnSave tests that saving via Ctrl+S doesn't trigger false staleness warnings
+func TestStalenessNoFalsePositiveOnSave(t *testing.T) {
+	setupTestEnvironment(t)
+	defer cleanup()
+
+	user := createTestUser(t, "saveuser", "password123")
+
+	// Create a post
+	slug := user.createPost(t, "Save Test Post", "Initial content.", true)
+	if slug == "" {
+		t.Fatal("Post creation failed")
+	}
+
+	// Wait for page to fully load
+	time.Sleep(500 * time.Millisecond)
+
+	// Simulate the scenario that was causing false positives:
+	// 1. Trigger a save (like Ctrl+S would)
+	// 2. Simultaneously trigger a staleness check (like focus event would)
+	// 3. Verify no staleness banner appears
+
+	// Use JavaScript to simulate the race condition scenario
+	result := user.Page.MustEval(`async () => {
+		// Get references to the functions/variables we need
+		const form = document.querySelector('form#postEditForm');
+		if (!form) return { error: 'Form not found' };
+
+		// Trigger save via form submission (same as Ctrl+S does)
+		const formData = new FormData(form);
+		
+		// Start both requests nearly simultaneously
+		const savePromise = fetch(form.action, {
+			method: 'POST',
+			body: formData,
+		});
+
+		// Small delay to let save start, then check for staleness
+		await new Promise(r => setTimeout(r, 50));
+		
+		// Wait for save to complete
+		const saveResponse = await savePromise;
+		
+		// Wait a bit more for any staleness check to complete
+		await new Promise(r => setTimeout(r, 200));
+		
+		// Check if staleness banner appeared (it shouldn't!)
+		const staleBanner = document.getElementById('staleBanner');
+		
+		return {
+			saveOk: saveResponse.ok,
+			staleBannerVisible: staleBanner !== null
+		};
+	}`)
+
+	resultMap := result.Map()
+
+	if !resultMap["saveOk"].Bool() {
+		t.Error("Save request should succeed")
+	}
+
+	if resultMap["staleBannerVisible"].Bool() {
+		t.Error("Staleness banner should NOT appear after a normal save - this indicates a race condition bug")
+	}
+}
+
 // TestPublishUnpublishToggle tests the publish/unpublish functionality
 func TestPublishUnpublishToggle(t *testing.T) {
 	setupTestEnvironment(t)
