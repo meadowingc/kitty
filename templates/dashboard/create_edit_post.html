@@ -369,14 +369,13 @@ window.addEventListener('load', function () {
     updateWording();
 
     {{ if $isEditing }}
-    // SaveManager - handles all save operations with proper queuing and state management
+    // SaveManager - handles all save operations
     window.SaveManager = {
         isSaving: false,
-        pendingSave: false,
         isStale: false,
         serverUpdatedAt: {{.Data.UpdatedAt.Unix}},
         
-        // Request a save - will be queued if one is in progress
+        // Request a save - skipped if one is already in progress
         requestSave() {
             if (this.isStale) {
                 console.log('Skipping save: content is stale');
@@ -384,12 +383,7 @@ window.addEventListener('load', function () {
             }
             
             if (this.isSaving) {
-                // A save is in progress, mark that we need another save after it completes
-                // But don't queue multiple - one pending save is enough
-                if (!this.pendingSave) {
-                    this.pendingSave = true;
-                    console.log('Save in progress, queuing next save');
-                }
+                console.log('Save already in progress, skipping');
                 return;
             }
             
@@ -399,7 +393,6 @@ window.addEventListener('load', function () {
         // Actually perform the save
         _executeSave() {
             this.isSaving = true;
-            this.pendingSave = false;
             
             const form = document.querySelector('form#postEditForm');
             
@@ -453,17 +446,6 @@ window.addEventListener('load', function () {
             })
             .finally(() => {
                 this.isSaving = false;
-                
-                // If another save was requested while we were saving, do it now
-                // Use setTimeout to ensure the response processing is complete
-                if (this.pendingSave && !this.isStale) {
-                    console.log('Processing queued save');
-                    setTimeout(() => {
-                        if (!this.isStale && !this.isSaving) {
-                            this._executeSave();
-                        }
-                    }, 50);
-                }
             });
         },
         
