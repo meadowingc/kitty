@@ -142,22 +142,22 @@ type TestUser struct {
 	Username string
 	Password string
 	Page     *rod.Page
+	Context  *rod.Browser // The incognito browser context
 }
 
 // createTestUser creates a new user via the signup page
 func createTestUser(t *testing.T, username, password string) *TestUser {
-	// Create a new incognito page for each user to avoid cookie conflicts
-	page := browser.MustIncognito().MustPage(testBaseURL + "/signup")
-	page.MustWaitLoad()
+	// Create a new incognito browser context for each user to isolate cookies
+	incognito := browser.MustIncognito()
+	page := incognito.MustPage(testBaseURL + "/signup")
 
+	// Wait for the form to be ready
 	page.MustElement("#username").MustInput(username)
 	page.MustElement("#password").MustInput(password)
 	page.MustElement("button[type=submit]").MustClick()
 
-	page.MustWaitLoad()
-
-	// Wait a bit for redirect
-	time.Sleep(200 * time.Millisecond)
+	// Wait for redirect to dashboard
+	time.Sleep(500 * time.Millisecond)
 
 	// Verify we're logged in by checking URL contains dashboard
 	currentURL := page.MustInfo().URL
@@ -169,21 +169,21 @@ func createTestUser(t *testing.T, username, password string) *TestUser {
 		Username: username,
 		Password: password,
 		Page:     page,
+		Context:  incognito,
 	}
 }
 
 // signInUser signs in an existing user
 func signInUser(t *testing.T, username, password string) *TestUser {
 	page := browser.MustPage(testBaseURL + "/signin")
-	page.MustWaitLoad()
 
+	// Wait for the form to be ready
 	page.MustElement("#username").MustInput(username)
 	page.MustElement("#password").MustInput(password)
 	page.MustElement("button[type=submit]").MustClick()
 
 	// Wait for the form submission and redirect to complete
 	time.Sleep(500 * time.Millisecond)
-	page.MustWaitLoad()
 
 	return &TestUser{
 		Username: username,
@@ -194,16 +194,20 @@ func signInUser(t *testing.T, username, password string) *TestUser {
 
 // createPost creates a post with the given title and body
 func (u *TestUser) createPost(t *testing.T, title, body string, publish bool) string {
+	// Navigate to new post page
 	u.Page.MustNavigate(testBaseURL + "/dashboard/post/new")
-	u.Page.MustWaitLoad()
 
-	// Wait for JavaScript to load
+	// Wait for the title input to be visible (indicates page is ready)
+	u.Page.Timeout(10 * time.Second).MustElement("#title")
+
+	// Wait for JavaScript to fully initialize
 	time.Sleep(500 * time.Millisecond)
 
 	u.Page.MustElement("#title").MustInput(title)
 
 	// Set the body via JavaScript since OverType editor is in use
-	u.Page.MustEval(`() => { document.getElementById('body').value = ` + "`" + body + "`" + ` }`)
+	// Pass body as a parameter to avoid string escaping issues
+	u.Page.MustEval(`(bodyVal) => { document.getElementById('body').value = bodyVal }`, body)
 
 	if publish {
 		checkbox := u.Page.MustElement("#published")
@@ -213,32 +217,31 @@ func (u *TestUser) createPost(t *testing.T, title, body string, publish bool) st
 	}
 
 	u.Page.MustElement("#submitButton").MustClick()
-	u.Page.MustWaitLoad()
 
-	// Wait for redirect
-	time.Sleep(300 * time.Millisecond)
+	// Wait for the redirect to complete
+	time.Sleep(1 * time.Second)
 
 	// The post edit page redirects to /dashboard/post/{id}, extract the slug from the page
-	slug := u.Page.MustElement("#slug").MustProperty("value").String()
+	slug := u.Page.Timeout(10 * time.Second).MustElement("#slug").MustProperty("value").String()
 	return slug
 }
 
 // navigateToSettings navigates to the settings page
 func (u *TestUser) navigateToSettings(t *testing.T) {
 	u.Page.MustNavigate(testBaseURL + "/dashboard/settings")
-	u.Page.MustWaitLoad()
+	time.Sleep(300 * time.Millisecond)
 }
 
 // navigateToPublicPost navigates to a public post
 func (u *TestUser) navigateToPublicPost(t *testing.T, username, slug string) {
 	u.Page.MustNavigate(fmt.Sprintf("%s/u/%s/%s", testBaseURL, username, slug))
-	u.Page.MustWaitLoad()
+	time.Sleep(300 * time.Millisecond)
 }
 
 // getPublicPage gets a new page (not authenticated) for viewing public content
 func getPublicPage(t *testing.T) *rod.Page {
 	page := browser.MustIncognito().MustPage(testBaseURL)
-	page.MustWaitLoad()
+	time.Sleep(300 * time.Millisecond)
 	return page
 }
 

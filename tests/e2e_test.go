@@ -12,15 +12,13 @@ func TestBacklinksFeature(t *testing.T) {
 	setupTestEnvironment(t)
 	defer cleanup()
 
-	// Create two users
+	// Create user1 and their post first
 	user1 := createTestUser(t, "alice", "password123")
-	user2 := createTestUser(t, "bob", "password456")
-
-	// User 1 creates a post
 	slug1 := user1.createPost(t, "My First Post", "This is my first post about Go programming.", true)
 	time.Sleep(200 * time.Millisecond) // Wait for async backlink processing
 
-	// User 2 creates a post that links to User 1's post
+	// Create user2 and their post that links to user1's post
+	user2 := createTestUser(t, "bob", "password456")
 	linkText := "[Check out this post](/u/alice/" + slug1 + ")"
 	slug2 := user2.createPost(t, "Interesting Article", "I found this interesting: "+linkText, true)
 	time.Sleep(500 * time.Millisecond) // Wait for async backlink processing
@@ -28,7 +26,7 @@ func TestBacklinksFeature(t *testing.T) {
 	// Navigate to User 1's post and verify backlink appears
 	publicPage := getPublicPage(t)
 	publicPage.MustNavigate(testBaseURL + "/u/alice/" + slug1)
-	publicPage.MustWaitLoad()
+	time.Sleep(500 * time.Millisecond)
 
 	// Check for backlinks section
 	backlinksSection := publicPage.MustElement(".post-backlinks")
