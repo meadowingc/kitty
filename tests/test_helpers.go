@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -27,10 +28,18 @@ const (
 var (
 	testServer *http.Server
 	browser    *rod.Browser
+	testMutex  sync.Mutex // Ensure only one test runs at a time
 )
 
 // setupTestEnvironment initializes the test database and server
 func setupTestEnvironment(t *testing.T) {
+	// Lock mutex to ensure only one test runs at a time
+	// This is needed because tests share global state (browser, server, database)
+	testMutex.Lock()
+	t.Cleanup(func() {
+		testMutex.Unlock()
+	})
+
 	// Change to parent directory so relative paths work
 	if err := os.Chdir(".."); err != nil {
 		t.Fatalf("Failed to change to parent directory: %v", err)
@@ -151,6 +160,11 @@ func createTestUser(t *testing.T, username, password string) *TestUser {
 	incognito := browser.MustIncognito()
 	page := incognito.MustPage(testBaseURL + "/signup")
 
+	// Register cleanup for this incognito context
+	t.Cleanup(func() {
+		incognito.MustClose()
+	})
+
 	// Wait for the form to be ready
 	page.MustElement("#username").MustInput(username)
 	page.MustElement("#password").MustInput(password)
@@ -197,13 +211,16 @@ func (u *TestUser) createPost(t *testing.T, title, body string, publish bool) st
 	// Navigate to new post page
 	u.Page.MustNavigate(testBaseURL + "/dashboard/post/new")
 
+	// Wait for the page to be ready by waiting for network idle
+	u.Page.MustWaitIdle()
+
 	// Wait for the title input to be visible (indicates page is ready)
-	u.Page.Timeout(10 * time.Second).MustElement("#title")
+	titleEl := u.Page.MustElement("#title")
 
 	// Wait for JavaScript to fully initialize
 	time.Sleep(500 * time.Millisecond)
 
-	u.Page.MustElement("#title").MustInput(title)
+	titleEl.MustInput(title)
 
 	// Set the body via JavaScript since OverType editor is in use
 	// Pass body as a parameter to avoid string escaping issues
@@ -240,7 +257,11 @@ func (u *TestUser) navigateToPublicPost(t *testing.T, username, slug string) {
 
 // getPublicPage gets a new page (not authenticated) for viewing public content
 func getPublicPage(t *testing.T) *rod.Page {
-	page := browser.MustIncognito().MustPage(testBaseURL)
+	incognito := browser.MustIncognito()
+	t.Cleanup(func() {
+		incognito.MustClose()
+	})
+	page := incognito.MustPage(testBaseURL)
 	time.Sleep(300 * time.Millisecond)
 	return page
 }
