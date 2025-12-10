@@ -157,12 +157,8 @@
 <script src="/assets/js/overtype.min.js"></script>
 <script>
 window.addEventListener('load', function () {
-    let saveTimeout;
     const isEditing = {{if $isEditing}}true{{else}}false{{end}};
     const postId = {{if $isEditing}}{{.Data.ID}}{{else}}null{{end}};
-    let serverUpdatedAt = {{if $isEditing}}{{.Data.UpdatedAt.Unix}}{{else}}null{{end}};
-    let isStale = false;
-    let isSaving = false; // Prevent staleness checks during save
 
     // OverType integration
     const hiddenTextarea = document.getElementById('body');
@@ -373,138 +369,182 @@ window.addEventListener('load', function () {
     updateWording();
 
     {{ if $isEditing }}
-    // Staleness detection - check if server has newer version
-    async function checkForStaleness() {
-        if (!isEditing || !postId || isSaving) return; // Skip if currently saving
-        try {
-            const response = await fetch('/dashboard/post/' + postId + '/check', {
-                method: 'GET',
-                headers: { 'Accept': 'application/json' }
-            });
-            if (response.ok) {
-                const data = await response.json();
-                // Double-check we're not in the middle of a save
-                if (!isSaving && data.updatedAt > serverUpdatedAt) {
-                    showStaleWarning(data.updatedAt);
-                }
+    // SaveManager - handles all save operations with proper queuing and state management
+    const SaveManager = {
+        isSaving: false,
+        pendingSave: false,
+        isStale: false,
+        serverUpdatedAt: {{.Data.UpdatedAt.Unix}},
+        
+        // Request a save - will be queued if one is in progress
+        requestSave() {
+            if (this.isStale) {
+                console.log('Skipping save: content is stale');
+                return;
             }
-        } catch (e) {
-            console.error('Staleness check failed:', e);
+            
+            if (this.isSaving) {
+                // A save is in progress, mark that we need another save after it completes
+                this.pendingSave = true;
+                console.log('Save in progress, queuing next save');
+                return;
+            }
+            
+            this._executeSave();
+        },
+        
+        // Actually perform the save
+        _executeSave() {
+            this.isSaving = true;
+            this.pendingSave = false;
+            
+            const form = document.querySelector('form#postEditForm');
+            
+            // Always use the current serverUpdatedAt for the request
+            const hiddenInput = document.getElementById('expectedUpdatedAt');
+            if (hiddenInput) {
+                hiddenInput.value = this.serverUpdatedAt.toString();
+            }
+            
+            const formData = new FormData(form);
+            
+            // Clear any previous slug error message
+            const slugError = document.getElementById('slugError');
+            slugError.style.display = 'none';
+
+            fetch(form.action, {
+                method: 'POST',
+                body: formData,
+            })
+            .then(response => {
+                if (response.ok) {
+                    // Update the timestamp from response header
+                    const newTimestamp = response.headers.get('X-Updated-At');
+                    if (newTimestamp) {
+                        this.serverUpdatedAt = parseInt(newTimestamp, 10);
+                        // Also update the hidden input
+                        if (hiddenInput) hiddenInput.value = newTimestamp;
+                    }
+                    this._showSaveIndicator();
+                } else if (response.status === 409) {
+                    // Conflict - server has newer version
+                    response.json().then(data => {
+                        this._showStaleWarning(data.updatedAt);
+                    }).catch(() => {
+                        this._showStaleWarning(Date.now() / 1000);
+                    });
+                } else {
+                    response.text().then(errorMessage => {
+                        console.error('Save failed:', errorMessage);
+                        if (errorMessage.includes('slug already exists')) {
+                            slugError.textContent = 'This slug is already in use. Please choose a different one.';
+                            slugError.style.display = 'block';
+                        } else {
+                            alert('Error saving {{if $isPage}}page{{else}}post{{end}}: ' + errorMessage);
+                        }
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Save error:', error);
+            })
+            .finally(() => {
+                this.isSaving = false;
+                
+                // If another save was requested while we were saving, do it now
+                if (this.pendingSave && !this.isStale) {
+                    console.log('Processing queued save');
+                    this._executeSave();
+                }
+            });
+        },
+        
+        _showSaveIndicator() {
+            const indicator = document.getElementById('saveIndicator');
+            indicator.classList.add('show');
+            clearTimeout(indicator._t);
+            indicator._t = setTimeout(() => indicator.classList.remove('show'), 1500);
+        },
+        
+        _showStaleWarning(newTimestamp) {
+            if (this.isStale) return; // Already showing warning
+            this.isStale = true;
+            this.pendingSave = false; // Cancel any pending saves
+            
+            // Create warning banner
+            const banner = document.createElement('div');
+            banner.id = 'staleBanner';
+            banner.innerHTML = `
+                <span>⚠️ This {{if $isPage}}page{{else}}post{{end}} was modified elsewhere. Your local changes may overwrite newer content.</span>
+                <button onclick="SaveManager.dismissStaleWarning()">Reload from server</button>
+                <button onclick="SaveManager.forceOverwrite()">Keep my changes</button>
+            `;
+            document.body.prepend(banner);
+        },
+        
+        dismissStaleWarning() {
+            location.reload();
+        },
+        
+        forceOverwrite() {
+            const banner = document.getElementById('staleBanner');
+            if (banner) banner.remove();
+            this.isStale = false;
+            // Set to 0 to force save (skip server-side version check)
+            this.serverUpdatedAt = 0;
+            // Trigger an immediate save with force flag
+            this.requestSave();
+        },
+        
+        // Check for staleness (called on tab focus, etc.)
+        async checkForStaleness() {
+            if (!isEditing || !postId || this.isSaving || this.isStale) return;
+            
+            try {
+                const response = await fetch('/dashboard/post/' + postId + '/check', {
+                    method: 'GET',
+                    headers: { 'Accept': 'application/json' }
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    // Double-check we're not in the middle of a save
+                    if (!this.isSaving && data.updatedAt > this.serverUpdatedAt) {
+                        this._showStaleWarning(data.updatedAt);
+                    }
+                }
+            } catch (e) {
+                console.error('Staleness check failed:', e);
+            }
         }
-    }
-
-    function showStaleWarning(newTimestamp) {
-        if (isStale) return; // Already showing warning
-        isStale = true;
-        
-        // Create warning banner
-        const banner = document.createElement('div');
-        banner.id = 'staleBanner';
-        banner.innerHTML = `
-            <span>⚠️ This {{if $isPage}}page{{else}}post{{end}} was modified elsewhere. Your local changes may overwrite newer content.</span>
-            <button onclick="location.reload()">Reload from server</button>
-            <button onclick="dismissStaleWarning()">Keep my changes</button>
-        `;
-        document.body.prepend(banner);
-        
-        // Disable auto-save while stale
-        clearTimeout(saveTimeout);
-    }
-
-    window.dismissStaleWarning = function() {
-        const banner = document.getElementById('staleBanner');
-        if (banner) banner.remove();
-        isStale = false;
-        // Update expectedUpdatedAt to allow saving (user chose to overwrite)
-        const hiddenInput = document.getElementById('expectedUpdatedAt');
-        if (hiddenInput) hiddenInput.value = '0'; // 0 means "force save"
     };
 
     // Check for staleness on visibility change (tab focus, wake from sleep)
     document.addEventListener('visibilitychange', function() {
-        if (document.visibilityState === 'visible' && !isStale) {
-            checkForStaleness();
+        if (document.visibilityState === 'visible') {
+            SaveManager.checkForStaleness();
         }
     });
 
     // Also check on window focus (covers more cases)
     window.addEventListener('focus', function() {
-        if (!isStale) {
-            checkForStaleness();
-        }
+        SaveManager.checkForStaleness();
     });
 
-    // autosave functionality
-    function triggerSave() {
-        if (isStale) {
-            console.log('Skipping auto-save: content is stale');
-            return;
-        }
-        
-        isSaving = true; // Prevent staleness checks during save
-        
-        const form = document.querySelector('form#postEditForm');
-        const formData = new FormData(form);
-
-        // Clear any previous slug error message
-        const slugError = document.getElementById('slugError');
-        slugError.style.display = 'none';
-
-        fetch(form.action, {
-            method: 'POST',
-            body: formData,
-        })
-        .then(response => {
-            if (response.ok) {
-                // Update the expectedUpdatedAt from response header
-                const newTimestamp = response.headers.get('X-Updated-At');
-                if (newTimestamp) {
-                    serverUpdatedAt = parseInt(newTimestamp, 10);
-                    const hiddenInput = document.getElementById('expectedUpdatedAt');
-                    if (hiddenInput) hiddenInput.value = newTimestamp;
-                }
-                showSaveMessage();
-            } else if (response.status === 409) {
-                // Conflict - server has newer version
-                response.json().then(data => {
-                    showStaleWarning(data.updatedAt);
-                }).catch(() => {
-                    showStaleWarning(Date.now() / 1000);
-                });
-            } else {
-                response.text().then(errorMessage => {
-                    console.error('Save failed:', errorMessage);
-                    if (errorMessage.includes('slug already exists')) {
-                        slugError.textContent = 'This slug is already in use. Please choose a different one.';
-                        slugError.style.display = 'block';
-                    } else {
-                        alert('Error saving {{if $isPage}}page{{else}}post{{end}}: ' + errorMessage);
-                    }
-                });
-            }
-        })
-        .catch(error => {
-            console.error('Save error:', error);
-        })
-        .finally(() => {
-            isSaving = false; // Allow staleness checks again
-        });
-    }
-
-    function showSaveMessage() {
-        const indicator = document.getElementById('saveIndicator');
-        indicator.classList.add('show');
-        clearTimeout(indicator._t);
-        indicator._t = setTimeout(() => indicator.classList.remove('show'), 1500);
+    // Autosave scheduling
+    let autoSaveTimeout;
+    
+    function scheduleAutoSave() {
+        clearTimeout(autoSaveTimeout);
+        autoSaveTimeout = setTimeout(() => SaveManager.requestSave(), 2000);
     }
 
     document.addEventListener('keydown', function (e) {
         if ((e.ctrlKey || e.metaKey) && e.key === 's') {
             e.preventDefault();
-            triggerSave();
+            clearTimeout(autoSaveTimeout); // Cancel pending autosave
+            SaveManager.requestSave();
         } else if (isEditing) {
-            clearTimeout(saveTimeout);
-            saveTimeout = setTimeout(triggerSave, 2000); // autosave after inactivity (edit mode only)
+            scheduleAutoSave();
         }
     });
     {{ end }}
