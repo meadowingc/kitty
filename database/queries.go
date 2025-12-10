@@ -1,6 +1,9 @@
 package database
 
-import "gorm.io/gorm"
+import (
+	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
+)
 
 func GetPostWithSlug(slug string) (*Post, error) {
 	var post Post
@@ -62,18 +65,19 @@ func GetBacklinksForPost(postID uint) ([]PostWithUser, error) {
 
 func SaveBacklinksForPost(sourcePostID uint, targetPostIDs []uint) error {
 	return db.Transaction(func(tx *gorm.DB) error {
-		// Delete existing backlinks for this source post
-		if err := tx.Where("source_post_id = ?", sourcePostID).Delete(&Backlink{}).Error; err != nil {
+		// Hard delete existing backlinks for this source post (Unscoped to bypass soft-delete)
+		if err := tx.Unscoped().Where("source_post_id = ?", sourcePostID).Delete(&Backlink{}).Error; err != nil {
 			return err
 		}
 
-		// Insert new backlinks
+		// Insert new backlinks (ignore duplicates from concurrent saves)
 		for _, targetID := range targetPostIDs {
 			backlink := Backlink{
 				SourcePostID: sourcePostID,
 				TargetPostID: targetID,
 			}
-			if err := tx.Create(&backlink).Error; err != nil {
+			// Use Clauses to ignore conflicts on duplicate (source_post_id, target_post_id)
+			if err := tx.Clauses(clause.OnConflict{DoNothing: true}).Create(&backlink).Error; err != nil {
 				return err
 			}
 		}
