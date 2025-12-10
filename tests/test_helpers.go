@@ -17,6 +17,7 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-rod/rod"
 	"github.com/go-rod/rod/lib/launcher"
+	"github.com/go-rod/rod/lib/proto"
 )
 
 const (
@@ -146,32 +147,38 @@ func startTestServer(t *testing.T) {
 	})
 }
 
-// TestUser represents a test user
+// TestUser represents a test user with their own browser page
 type TestUser struct {
 	Username string
 	Password string
 	Page     *rod.Page
-	Context  *rod.Browser // The incognito browser context
+	Cookies  []*proto.NetworkCookieParam // Saved cookies for this user's session
 }
 
 // createTestUser creates a new user via the signup page
 func createTestUser(t *testing.T, username, password string) *TestUser {
-	// Create a new incognito browser context for each user to isolate cookies
-	incognito := browser.MustIncognito()
-	page := incognito.MustPage(testBaseURL + "/signup")
+	// Create a new page for this user
+	page := browser.MustPage()
 
-	// Register cleanup for this incognito context
-	t.Cleanup(func() {
-		incognito.MustClose()
-	})
+	// Clear any existing cookies to ensure a fresh session
+	page.MustSetCookies()
 
-	// Wait for the form to be ready
-	page.MustElement("#username").MustInput(username)
-	page.MustElement("#password").MustInput(password)
-	page.MustElement("button[type=submit]").MustClick()
-
-	// Wait for redirect to dashboard
+	// Navigate to signup page and wait for it to load
+	page.MustNavigate(testBaseURL + "/signup")
 	time.Sleep(500 * time.Millisecond)
+
+	// Wait for the form elements to be ready and use JS input to avoid hanging
+	usernameEl := page.MustElement("#username")
+	usernameEl.MustEval(`(val) => { this.value = val; this.dispatchEvent(new Event('input', { bubbles: true })); }`, username)
+
+	passwordEl := page.MustElement("#password")
+	passwordEl.MustEval(`(val) => { this.value = val; this.dispatchEvent(new Event('input', { bubbles: true })); }`, password)
+
+	// Use JavaScript click to avoid hanging
+	page.MustEval(`() => document.querySelector('button[type=submit]').click()`)
+
+	// Wait for navigation to complete after form submission
+	time.Sleep(700 * time.Millisecond)
 
 	// Verify we're logged in by checking URL contains dashboard
 	currentURL := page.MustInfo().URL
@@ -179,90 +186,143 @@ func createTestUser(t *testing.T, username, password string) *TestUser {
 		t.Fatalf("Expected to be on dashboard after signup, got: %s", currentURL)
 	}
 
+	// Save this user's cookies for later restoration
+	cookies := page.MustCookies()
+	cookieParams := convertCookiesToParams(cookies)
+
 	return &TestUser{
 		Username: username,
 		Password: password,
 		Page:     page,
-		Context:  incognito,
+		Cookies:  cookieParams,
+	}
+}
+
+// restoreSession restores the user's session by setting their cookies
+func (u *TestUser) restoreSession() {
+	// Set the user's cookies to restore their session
+	if len(u.Cookies) > 0 {
+		u.Page.MustSetCookies(u.Cookies...)
 	}
 }
 
 // signInUser signs in an existing user
 func signInUser(t *testing.T, username, password string) *TestUser {
-	page := browser.MustPage(testBaseURL + "/signin")
+	page := browser.MustPage()
 
-	// Wait for the form to be ready
-	page.MustElement("#username").MustInput(username)
-	page.MustElement("#password").MustInput(password)
-	page.MustElement("button[type=submit]").MustClick()
+	// Clear any existing cookies
+	page.MustSetCookies()
 
-	// Wait for the form submission and redirect to complete
+	page.MustNavigate(testBaseURL + "/signin")
 	time.Sleep(500 * time.Millisecond)
+
+	// Wait for the form to be ready and use JS input to avoid hanging
+	usernameEl := page.MustElement("#username")
+	usernameEl.MustEval(`(val) => { this.value = val; this.dispatchEvent(new Event('input', { bubbles: true })); }`, username)
+
+	passwordEl := page.MustElement("#password")
+	passwordEl.MustEval(`(val) => { this.value = val; this.dispatchEvent(new Event('input', { bubbles: true })); }`, password)
+
+	// Use JavaScript click to avoid hanging
+	page.MustEval(`() => document.querySelector('button[type=submit]').click()`)
+
+	// Wait for navigation to complete
+	time.Sleep(700 * time.Millisecond)
+
+	cookies := page.MustCookies()
+	cookieParams := convertCookiesToParams(cookies)
 
 	return &TestUser{
 		Username: username,
 		Password: password,
 		Page:     page,
+		Cookies:  cookieParams,
 	}
+}
+
+// convertCookiesToParams converts NetworkCookie to NetworkCookieParam
+func convertCookiesToParams(cookies []*proto.NetworkCookie) []*proto.NetworkCookieParam {
+	params := make([]*proto.NetworkCookieParam, len(cookies))
+	for i, c := range cookies {
+		params[i] = &proto.NetworkCookieParam{
+			Name:     c.Name,
+			Value:    c.Value,
+			Domain:   c.Domain,
+			Path:     c.Path,
+			Secure:   c.Secure,
+			HTTPOnly: c.HTTPOnly,
+		}
+	}
+	return params
 }
 
 // createPost creates a post with the given title and body
 func (u *TestUser) createPost(t *testing.T, title, body string, publish bool) string {
+	// Restore session cookies before navigation
+	u.restoreSession()
+
 	// Navigate to new post page
 	u.Page.MustNavigate(testBaseURL + "/dashboard/post/new")
+	time.Sleep(1000 * time.Millisecond) // Wait for page load and JS to initialize
 
-	// Wait for the page to be ready by waiting for network idle
-	u.Page.MustWaitIdle()
+	// Verify we're on the right page
+	currentURL := u.Page.MustInfo().URL
+	if !strings.Contains(currentURL, "/dashboard/post/new") {
+		t.Fatalf("Expected to be on /dashboard/post/new, got: %s", currentURL)
+	}
 
-	// Wait for the title input to be visible (indicates page is ready)
-	titleEl := u.Page.MustElement("#title")
+	// Wait for elements with longer timeout
+	titleEl := u.Page.Timeout(15 * time.Second).MustElement("#title")
+	u.Page.Timeout(15 * time.Second).MustElement("#body")         // Verify body exists
+	u.Page.Timeout(15 * time.Second).MustElement("#submitButton") // Verify submit button exists
 
-	// Wait for JavaScript to fully initialize
-	time.Sleep(500 * time.Millisecond)
-
-	titleEl.MustInput(title)
+	// Use JavaScript for input to avoid Rod's hanging MustInput method
+	titleEl.MustEval(`(val) => { this.value = val; this.dispatchEvent(new Event('input', { bubbles: true })); }`, title)
 
 	// Set the body via JavaScript since OverType editor is in use
-	// Pass body as a parameter to avoid string escaping issues
 	u.Page.MustEval(`(bodyVal) => { document.getElementById('body').value = bodyVal }`, body)
 
 	if publish {
-		checkbox := u.Page.MustElement("#published")
-		if !checkbox.MustProperty("checked").Bool() {
-			checkbox.MustClick()
-		}
+		// Use JavaScript to check the published checkbox
+		u.Page.MustEval(`() => {
+const cb = document.getElementById('published');
+if (!cb.checked) cb.click();
+}`)
 	}
 
-	u.Page.MustElement("#submitButton").MustClick()
+	// Use JavaScript for click to avoid Rod's hanging wait methods
+	u.Page.MustEval(`() => document.getElementById('submitButton').click()`)
 
-	// Wait for the redirect to complete
-	time.Sleep(1 * time.Second)
+	// Wait for redirect to complete
+	time.Sleep(700 * time.Millisecond)
+
+	// Update cookies after the action
+	u.Cookies = convertCookiesToParams(u.Page.MustCookies())
 
 	// The post edit page redirects to /dashboard/post/{id}, extract the slug from the page
-	slug := u.Page.Timeout(10 * time.Second).MustElement("#slug").MustProperty("value").String()
+	slug := u.Page.Timeout(15 * time.Second).MustElement("#slug").MustProperty("value").String()
 	return slug
 }
 
 // navigateToSettings navigates to the settings page
 func (u *TestUser) navigateToSettings(t *testing.T) {
+	u.restoreSession()
 	u.Page.MustNavigate(testBaseURL + "/dashboard/settings")
-	time.Sleep(300 * time.Millisecond)
+	time.Sleep(500 * time.Millisecond)
 }
 
 // navigateToPublicPost navigates to a public post
 func (u *TestUser) navigateToPublicPost(t *testing.T, username, slug string) {
 	u.Page.MustNavigate(fmt.Sprintf("%s/u/%s/%s", testBaseURL, username, slug))
-	time.Sleep(300 * time.Millisecond)
+	time.Sleep(500 * time.Millisecond)
 }
 
 // getPublicPage gets a new page (not authenticated) for viewing public content
 func getPublicPage(t *testing.T) *rod.Page {
-	incognito := browser.MustIncognito()
-	t.Cleanup(func() {
-		incognito.MustClose()
-	})
-	page := incognito.MustPage(testBaseURL)
-	time.Sleep(300 * time.Millisecond)
+	page := browser.MustPage()
+	page.MustSetCookies() // Clear cookies to ensure not authenticated
+	page.MustNavigate(testBaseURL)
+	time.Sleep(500 * time.Millisecond)
 	return page
 }
 

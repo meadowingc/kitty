@@ -74,7 +74,7 @@ func TestBacklinksToggle(t *testing.T) {
 	// Verify backlinks are shown by default
 	publicPage := getPublicPage(t)
 	publicPage.MustNavigate(testBaseURL + "/u/charlie/" + slug1)
-	publicPage.MustWaitLoad()
+	time.Sleep(500 * time.Millisecond)
 
 	// Backlinks should be visible by default
 	if !publicPage.MustHas(".post-backlinks") {
@@ -83,21 +83,21 @@ func TestBacklinksToggle(t *testing.T) {
 
 	// User 1 disables backlinks in settings
 	user1.navigateToSettings(t)
-	checkbox := user1.Page.MustElement("#showBacklinks")
-	if checkbox.MustProperty("checked").Bool() {
-		checkbox.MustClick()
-	}
-	// Use a more specific selector to avoid matching the logout button in header
-	user1.Page.MustElement(".btn-cozy[type=submit]").MustClick()
-	user1.Page.MustWaitLoad()
+	// Use JavaScript to toggle the checkbox and click submit to avoid hanging
+	user1.Page.MustEval(`() => {
+const cb = document.getElementById('showBacklinks');
+if (cb.checked) cb.click();
+}`)
+	// Use JavaScript to click submit
+	user1.Page.MustEval(`() => document.querySelector('.btn-cozy[type=submit]').click()`)
+	time.Sleep(500 * time.Millisecond)
 
 	// Wait for settings to be saved
 	time.Sleep(300 * time.Millisecond)
 
 	// Verify backlinks are now hidden
 	publicPage.MustNavigate(testBaseURL + "/u/charlie/" + slug1)
-	publicPage.MustWaitLoad()
-	time.Sleep(200 * time.Millisecond)
+	time.Sleep(500 * time.Millisecond)
 
 	if publicPage.MustHas(".post-backlinks") {
 		t.Error("Backlinks should be hidden after disabling in settings")
@@ -128,7 +128,7 @@ func TestMultipleBacklinks(t *testing.T) {
 	// Verify both backlinks appear
 	publicPage := getPublicPage(t)
 	publicPage.MustNavigate(testBaseURL + "/u/emma/" + slug1)
-	publicPage.MustWaitLoad()
+	time.Sleep(500 * time.Millisecond)
 
 	backlinksSection := publicPage.MustElement(".post-backlinks")
 	backlinkText := backlinksSection.MustText()
@@ -154,10 +154,9 @@ func TestAuthenticationFlow(t *testing.T) {
 		t.Errorf("Expected to be on dashboard after signup, got: %s", currentURL)
 	}
 
-	// Test logout - use form action selector to ensure we click the right button
-	user.Page.MustElement("form[action='/logout'] button[type=submit]").MustClick()
-	time.Sleep(500 * time.Millisecond)
-	user.Page.MustWaitLoad()
+	// Test logout - use JavaScript click to avoid hanging
+	user.Page.MustEval(`() => document.querySelector("form[action='/logout'] button[type=submit]").click()`)
+	time.Sleep(700 * time.Millisecond)
 
 	// Should redirect to signin page
 	currentURL = user.Page.MustInfo().URL
@@ -196,12 +195,12 @@ func TestPostManagement(t *testing.T) {
 
 	// Edit the post - use JavaScript to update the title field
 	user.Page.MustEval(`() => {
-		const titleField = document.getElementById('title');
-		titleField.value = 'Updated Test Post';
-		document.getElementById('body').value = 'This is the updated body.';
-	}`)
-	user.Page.MustElement("#submitButton").MustClick()
-	user.Page.MustWaitLoad()
+const titleField = document.getElementById('title');
+titleField.value = 'Updated Test Post';
+document.getElementById('body').value = 'This is the updated body.';
+}`)
+	user.Page.MustEval(`() => document.getElementById('submitButton').click()`)
+	time.Sleep(700 * time.Millisecond)
 
 	// Wait for page to fully load
 	time.Sleep(300 * time.Millisecond)
@@ -218,8 +217,8 @@ func TestPostManagement(t *testing.T) {
 		wait()
 		handle(true, "")
 	}()
-	user.Page.MustElement("form[action*='/delete'] input[type=submit]").MustClick()
-	user.Page.MustWaitLoad()
+	user.Page.MustEval(`() => document.querySelector("form[action*='/delete'] input[type=submit]").click()`)
+	time.Sleep(700 * time.Millisecond)
 
 	// Should redirect to dashboard
 	currentURL := user.Page.MustInfo().URL
@@ -349,21 +348,20 @@ func TestPublishUnpublishToggle(t *testing.T) {
 
 	// Create an unpublished post
 	user.Page.MustNavigate(testBaseURL + "/dashboard/post/new")
-	user.Page.MustWaitLoad()
-	time.Sleep(500 * time.Millisecond) // Wait for JS to load
+	time.Sleep(700 * time.Millisecond) // Wait for JS to load
 
-	user.Page.MustElement("#title").MustInput("Draft Post")
+	user.Page.MustEval(`() => { document.getElementById('title').value = "Draft Post" }`)
 	user.Page.MustEval(`() => { document.getElementById('body').value = "This is a draft." }`)
 	// Don't check the published checkbox
-	user.Page.MustElement("#submitButton").MustClick()
-	user.Page.MustWaitLoad()
+	user.Page.MustEval(`() => document.getElementById('submitButton').click()`)
+	time.Sleep(700 * time.Millisecond)
 
 	slug := user.Page.MustElement("#slug").MustProperty("value").String()
 
 	// Try to access as public (should fail)
 	publicPage := getPublicPage(t)
 	publicPage.MustNavigate(testBaseURL + "/u/publisher/" + slug)
-	publicPage.MustWaitLoad()
+	time.Sleep(500 * time.Millisecond)
 
 	// Should show 404 or "Post not found"
 	pageText := publicPage.MustElement("body").MustText()
@@ -371,17 +369,16 @@ func TestPublishUnpublishToggle(t *testing.T) {
 		t.Error("Unpublished post should not be accessible publicly")
 	}
 
-	// Publish the post
-	user.Page.MustElement("#published").MustClick()
-	user.Page.MustElement("#submitButton").MustClick()
-	user.Page.MustWaitLoad()
+	// Publish the post - use JavaScript for both to avoid hanging
+	user.Page.MustEval(`() => document.getElementById('published').click()`)
+	user.Page.MustEval(`() => document.getElementById('submitButton').click()`)
+	time.Sleep(700 * time.Millisecond)
 
 	time.Sleep(100 * time.Millisecond)
 
 	// Now it should be accessible
 	publicPage.MustNavigate(testBaseURL + "/u/publisher/" + slug)
-	publicPage.MustWaitLoad()
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(500 * time.Millisecond)
 
 	// Find the post title in the main content area (not the site header)
 	pageTitle := publicPage.MustElement("article h1, .post-content h1, main h1").MustText()
@@ -404,19 +401,15 @@ func TestSettingsUpdate(t *testing.T) {
 	// Navigate to settings
 	user.navigateToSettings(t)
 
-	// Update blog title
-	blogTitleField := user.Page.MustElement("#blogTitle")
-	blogTitleField.MustSelectAllText()
-	blogTitleField.MustInput("My Awesome Blog")
+	// Update blog title using JavaScript
+	user.Page.MustEval(`() => { document.getElementById('blogTitle').value = "My Awesome Blog" }`)
 
-	// Update header markdown
-	headerField := user.Page.MustElement("#headerMarkdown")
-	headerField.MustSelectAllText()
-	headerField.MustInput("[Home](/u/settings_user) | [About](/u/settings_user/about)")
+	// Update header markdown using JavaScript
+	user.Page.MustEval(`() => { document.getElementById('headerMarkdown').value = "[Home](/u/settings_user) | [About](/u/settings_user/about)" }`)
 
-	// Save settings - use specific selector
-	user.Page.MustElement(".btn-cozy[type=submit]").MustClick()
-	user.Page.MustWaitLoad()
+	// Save settings - use JavaScript click
+	user.Page.MustEval(`() => document.querySelector('.btn-cozy[type=submit]').click()`)
+	time.Sleep(700 * time.Millisecond)
 
 	// Verify settings were saved
 	blogTitle := user.Page.MustElement("#blogTitle").MustProperty("value").String()
@@ -434,31 +427,29 @@ func TestTagFiltering(t *testing.T) {
 
 	// Create posts with different tags
 	user.Page.MustNavigate(testBaseURL + "/dashboard/post/new")
-	user.Page.MustWaitLoad()
-	time.Sleep(500 * time.Millisecond) // Wait for JS to load
-	user.Page.MustElement("#title").MustInput("Go Post")
+	time.Sleep(700 * time.Millisecond) // Wait for JS to load
+	user.Page.MustEval(`() => { document.getElementById('title').value = "Go Post" }`)
 	user.Page.MustEval(`() => { document.getElementById('body').value = "About Go programming" }`)
-	user.Page.MustElement("#tags").MustInput("go, programming")
-	user.Page.MustElement("#published").MustClick()
-	user.Page.MustElement("#submitButton").MustClick()
-	user.Page.MustWaitLoad()
+	user.Page.MustEval(`() => { document.getElementById('tags').value = "go, programming" }`)
+	user.Page.MustEval(`() => document.getElementById('published').click()`)
+	user.Page.MustEval(`() => document.getElementById('submitButton').click()`)
+	time.Sleep(700 * time.Millisecond)
 
 	user.Page.MustNavigate(testBaseURL + "/dashboard/post/new")
-	user.Page.MustWaitLoad()
-	time.Sleep(500 * time.Millisecond) // Wait for JS to load
-	user.Page.MustElement("#title").MustInput("Rust Post")
+	time.Sleep(700 * time.Millisecond) // Wait for JS to load
+	user.Page.MustEval(`() => { document.getElementById('title').value = "Rust Post" }`)
 	user.Page.MustEval(`() => { document.getElementById('body').value = "About Rust programming" }`)
-	user.Page.MustElement("#tags").MustInput("rust, programming")
-	user.Page.MustElement("#published").MustClick()
-	user.Page.MustElement("#submitButton").MustClick()
-	user.Page.MustWaitLoad()
+	user.Page.MustEval(`() => { document.getElementById('tags').value = "rust, programming" }`)
+	user.Page.MustEval(`() => document.getElementById('published').click()`)
+	user.Page.MustEval(`() => document.getElementById('submitButton').click()`)
+	time.Sleep(700 * time.Millisecond)
 
 	time.Sleep(200 * time.Millisecond)
 
 	// View tag page for "go"
 	publicPage := getPublicPage(t)
 	publicPage.MustNavigate(testBaseURL + "/u/tagger/tag/go")
-	publicPage.MustWaitLoad()
+	time.Sleep(500 * time.Millisecond)
 
 	pageText := publicPage.MustElement("body").MustText()
 	if !strings.Contains(pageText, "Go Post") {
@@ -483,7 +474,7 @@ func TestRSSFeed(t *testing.T) {
 	// Access RSS feed
 	publicPage := getPublicPage(t)
 	publicPage.MustNavigate(testBaseURL + "/u/rssuser/feed.xml")
-	publicPage.MustWaitLoad()
+	time.Sleep(500 * time.Millisecond)
 
 	// Check that it contains RSS content
 	pageText := publicPage.MustElement("body").MustText()
@@ -511,7 +502,7 @@ func TestArchivePage(t *testing.T) {
 	// View archive page
 	publicPage := getPublicPage(t)
 	publicPage.MustNavigate(testBaseURL + "/u/archiver/archive")
-	publicPage.MustWaitLoad()
+	time.Sleep(500 * time.Millisecond)
 
 	pageText := publicPage.MustElement("body").MustText()
 
@@ -558,8 +549,7 @@ func TestCustomCSS(t *testing.T) {
 
 	// Save settings by clicking the submit button via JavaScript
 	user.Page.MustEval(`() => document.querySelector('button.btn-cozy[type="submit"]').click()`)
-	user.Page.MustWaitLoad()
-	time.Sleep(200 * time.Millisecond)
+	time.Sleep(500 * time.Millisecond)
 
 	// Verify CSS was saved by checking the field still has the value
 	user.Page.MustEval(`() => document.querySelector('.tab-btn[data-tab="appearance"]').click()`)
@@ -572,7 +562,7 @@ func TestCustomCSS(t *testing.T) {
 	// Check that CSS appears on the public page
 	publicPage := getPublicPage(t)
 	publicPage.MustNavigate(testBaseURL + "/u/styler/styled-post")
-	publicPage.MustWaitLoad()
+	time.Sleep(500 * time.Millisecond)
 
 	// Get the page HTML and check for the custom CSS in a style tag
 	pageHTML := publicPage.MustHTML()
@@ -613,13 +603,12 @@ p { background: expression(alert('xss')); }`
 
 	user.Page.MustEval(fmt.Sprintf(`() => { document.getElementById('customCSS').value = %q }`, maliciousCSS))
 	user.Page.MustEval(`() => document.querySelector('button.btn-cozy[type="submit"]').click()`)
-	user.Page.MustWaitLoad()
-	time.Sleep(200 * time.Millisecond)
+	time.Sleep(500 * time.Millisecond)
 
 	// Check the public page - malicious content should be stripped
 	publicPage := getPublicPage(t)
 	publicPage.MustNavigate(testBaseURL + "/u/hacker/hacker-post")
-	publicPage.MustWaitLoad()
+	time.Sleep(500 * time.Millisecond)
 
 	pageHTML := publicPage.MustHTML()
 

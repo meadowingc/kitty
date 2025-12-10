@@ -370,7 +370,7 @@ window.addEventListener('load', function () {
 
     {{ if $isEditing }}
     // SaveManager - handles all save operations with proper queuing and state management
-    const SaveManager = {
+    window.SaveManager = {
         isSaving: false,
         pendingSave: false,
         isStale: false,
