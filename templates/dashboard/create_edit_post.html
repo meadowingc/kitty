@@ -385,8 +385,11 @@ window.addEventListener('load', function () {
             
             if (this.isSaving) {
                 // A save is in progress, mark that we need another save after it completes
-                this.pendingSave = true;
-                console.log('Save in progress, queuing next save');
+                // But don't queue multiple - one pending save is enough
+                if (!this.pendingSave) {
+                    this.pendingSave = true;
+                    console.log('Save in progress, queuing next save');
+                }
                 return;
             }
             
@@ -452,9 +455,14 @@ window.addEventListener('load', function () {
                 this.isSaving = false;
                 
                 // If another save was requested while we were saving, do it now
+                // Use setTimeout to ensure the response processing is complete
                 if (this.pendingSave && !this.isStale) {
                     console.log('Processing queued save');
-                    this._executeSave();
+                    setTimeout(() => {
+                        if (!this.isStale && !this.isSaving) {
+                            this._executeSave();
+                        }
+                    }, 50);
                 }
             });
         },
