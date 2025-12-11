@@ -165,6 +165,45 @@ window.addEventListener('load', function () {
     const initialValue = hiddenTextarea.value;
     let currentTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'cave' : 'solar';
 
+    // Track initial form state for dirty checking
+    const initialFormState = {
+        title: document.getElementById('title')?.value || '',
+        slug: document.getElementById('slug')?.value || '',
+        publishedDate: document.getElementById('publishedDate')?.value || '',
+        tags: document.getElementById('tags')?.value || '',
+        metaDescription: document.getElementById('metaDescription')?.value || '',
+        metaImage: document.getElementById('metaImage')?.value || '',
+        lang: document.getElementById('lang')?.value || '',
+        published: document.getElementById('published')?.checked || false,
+        isPage: document.getElementById('isPage')?.checked || false,
+        showOnHomepage: document.getElementById('showOnHomepage')?.checked || false,
+        body: initialValue
+    };
+
+    // Function to check if form has local changes
+    function hasLocalChanges() {
+        const currentState = {
+            title: document.getElementById('title')?.value || '',
+            slug: document.getElementById('slug')?.value || '',
+            publishedDate: document.getElementById('publishedDate')?.value || '',
+            tags: document.getElementById('tags')?.value || '',
+            metaDescription: document.getElementById('metaDescription')?.value || '',
+            metaImage: document.getElementById('metaImage')?.value || '',
+            lang: document.getElementById('lang')?.value || '',
+            published: document.getElementById('published')?.checked || false,
+            isPage: document.getElementById('isPage')?.checked || false,
+            showOnHomepage: document.getElementById('showOnHomepage')?.checked || false,
+            body: hiddenTextarea.value
+        };
+        
+        for (const key in initialFormState) {
+            if (initialFormState[key] !== currentState[key]) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     const [otEditor] = new OverType.OverType('#bodyEditor', {
         value: initialValue,
         toolbar: true,
@@ -519,6 +558,13 @@ window.addEventListener('load', function () {
                     const data = await response.json();
                     // Double-check we're not in the middle of a save
                     if (!this.isSaving && data.updatedAt > this.serverUpdatedAt) {
+                        // If no local changes, proactively pull new content
+                        if (!hasLocalChanges()) {
+                            console.log('Server has newer content and no local changes - reloading');
+                            location.reload();
+                            return;
+                        }
+                        // Otherwise show warning for user to decide
                         this._showStaleWarning(data.updatedAt);
                     }
                 }
