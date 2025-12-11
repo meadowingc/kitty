@@ -213,6 +213,13 @@ footer {
   margin: 0;
 }
 
+/* Hide site title text on mobile, keep only emoji */
+@media (max-width: 600px) {
+  .title h1 .site-title-text {
+    display: none;
+  }
+}
+
 /* --- Cozy Styles from tailwind.css --- */
 /* Cozy Buttons */
 .btn-cozy {
@@ -684,6 +691,12 @@ body.fullscreen-mode {
   margin: 0;
   max-width: 100%;
   overflow: hidden;
+  /* Use fixed positioning for the entire body to prevent scroll issues on mobile */
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
 }
 
 body.fullscreen-mode header,
@@ -698,12 +711,14 @@ body.fullscreen-mode form[action*="/delete"] {
 body.fullscreen-mode main {
   padding: 0;
   height: 100vh;
+  height: 100dvh; /* Dynamic viewport height for mobile - ignores browser UI */
   display: flex;
   flex-direction: column;
 }
 
 body.fullscreen-mode .post-editor {
   height: 100vh;
+  height: 100dvh;
   margin: 0;
   gap: 0;
 }
@@ -711,6 +726,7 @@ body.fullscreen-mode .post-editor {
 body.fullscreen-mode #bodyEditorShell {
   flex: 1;
   height: 100vh;
+  height: 100dvh;
   border-radius: 0;
   border: none;
   display: flex;
@@ -721,6 +737,24 @@ body.fullscreen-mode #bodyEditor {
   flex: 1;
   height: 100%;
   min-height: unset;
+}
+
+/* Ensure editor header is always visible in fullscreen on mobile */
+body.fullscreen-mode .editor-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--cozy-warmwhite);
+  /* Add safe area padding for devices with notches/dynamic islands */
+  padding-top: calc(0.6rem + env(safe-area-inset-top, 0px));
+  padding-left: calc(0.9rem + env(safe-area-inset-left, 0px));
+  padding-right: calc(0.9rem + env(safe-area-inset-right, 0px));
+}
+
+@media (prefers-color-scheme: dark) {
+  body.fullscreen-mode .editor-header {
+    background: var(--cozy-brown-800);
+  }
 }
 
 .fullscreen-toggle {

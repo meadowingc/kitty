@@ -24,7 +24,7 @@
     <header>
         {{if .Global.ViewingUser}}<a class="title" href="/u/{{ pathEscape .Global.ViewingUser.Username }}">{{else}}<a class="title" href="/">{{end}}
             <h1>
-                <span style="font-size: 1.2em;">{{.Global.DisplayEmoji}}</span> {{.Global.DisplaySiteTitle}}
+                <span style="font-size: 1.2em;">{{.Global.DisplayEmoji}}</span><span class="site-title-text"> {{.Global.DisplaySiteTitle}}</span>
             </h1>
         </a>
         <nav class="nav-right">
