@@ -739,6 +739,12 @@ body.fullscreen-mode #bodyEditor {
   min-height: unset;
 }
 
+@media (max-width: 600px) {
+  body.fullscreen-mode #bodyEditor {
+    padding: 0.5em;
+  }
+}
+
 /* Ensure editor header is always visible in fullscreen on mobile */
 body.fullscreen-mode .editor-header {
   position: sticky;
