@@ -682,7 +682,19 @@ func PublicViewUserByUsername(w http.ResponseWriter, r *http.Request) {
 		var homePost database.Post
 		pr := database.GetDB().Where("id = ? AND admin_user_id = ? AND published = ? AND is_page = ?", *user.HomePagePostID, user.ID, true, true).First(&homePost)
 		if pr.Error == nil {
-			RenderTemplate(w, r, "public_view_post", homePost)
+			// Get backlinks for this post
+			backlinks, _ := database.GetBacklinksForPost(homePost.ID)
+
+			// Create data structure with post and backlinks
+			data := struct {
+				database.Post
+				Backlinks []database.PostWithUser
+			}{
+				Post:      homePost,
+				Backlinks: backlinks,
+			}
+
+			RenderTemplate(w, r, "public_view_post", data)
 			return
 		} else {
 			// clear invalid pointer
