@@ -141,6 +141,12 @@ header {
   border-bottom: 2px dotted var(--cozy-brown-300);
 }
 
+@media (max-width: 600px) {
+  header {
+    padding-bottom: 1rem;
+  }
+}
+
 main {
   line-height: 1.6;
   padding-bottom: 1.5em;
