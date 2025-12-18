@@ -204,7 +204,7 @@ window.addEventListener('load', function () {
         return false;
     }
 
-    const [otEditor] = new OverType.OverType('#bodyEditor', {
+    const [otEditor] = new OverType('#bodyEditor', {
         value: initialValue,
         toolbar: true,
         showStats: true,
@@ -281,8 +281,8 @@ window.addEventListener('load', function () {
         
         // Ensure editor refreshes properly after layout change
         setTimeout(() => {
-            if (otEditor && otEditor.refresh) {
-                otEditor.refresh();
+            if (otEditor && otEditor.focus) {
+                otEditor.focus();
             }
         }, 100);
     }
@@ -348,12 +348,15 @@ window.addEventListener('load', function () {
     window.addEventListener('pageshow', (e) => {
         if (e.persisted) {
             setTimeout(() => {
-                if (otEditor && otEditor.isInitialized()) {
+                if (otEditor && otEditor.isInitialized && otEditor.isInitialized()) {
                     otEditor.reinit({
                         value: hiddenTextarea.value,
                         toolbar: true,
                         showStats: true,
-                        theme: currentTheme
+                        theme: currentTheme,
+                        onChange: (val) => {
+                            hiddenTextarea.value = val;
+                        }
                     });
                     otEditor.focus();
                 }
