@@ -15,7 +15,7 @@ BACKUP_DIR="/usr/bin"
 BUILD_DIR="/tmp/caddy-build-$$"
 LOG_PREFIX="[caddy-update]"
 
-# Modules to include (add more as needed)
+# Modules to include
 MODULES=(
     "github.com/mholt/caddy-l4"
 )

@@ -29,24 +29,26 @@ const (
 )
 
 func StartGeminiServer() {
-	plaintext := os.Getenv("GEMINI_PLAINTEXT") == "1"
+	// Auto-detect TLS mode: use plaintext only if explicitly set OR if certs don't exist
+	certsExist := fileExists(geminiCertFile) && fileExists(geminiKeyFile)
+	forcePlaintext := os.Getenv("GEMINI_PLAINTEXT") == "1"
+	useTLS := certsExist && !forcePlaintext
 
 	var ln net.Listener
 	var err error
 
-	if plaintext {
+	if !useTLS {
+		if forcePlaintext {
+			log.Printf("Gemini: GEMINI_PLAINTEXT=1, running in plaintext mode")
+		} else {
+			log.Printf("Gemini: No certificates found at %s, running in plaintext mode", geminiCertFile)
+		}
 		ln, err = net.Listen("tcp", geminiListenPort)
 		if err != nil {
 			panic(fmt.Sprintf("Failed starting Gemini plaintext listener: %v", err))
 		}
 		log.Printf("Gemini (PLAINTEXT mode) listening on %s (expect external TLS termination)", geminiListenPort)
 	} else {
-		if _, err := os.Stat(geminiCertFile); err != nil {
-			panic(missingCertsMessage("certificate", geminiCertFile, geminiKeyFile))
-		}
-		if _, err := os.Stat(geminiKeyFile); err != nil {
-			panic(missingCertsMessage("key", geminiCertFile, geminiKeyFile))
-		}
 		certPair, err := tls.LoadX509KeyPair(geminiCertFile, geminiKeyFile)
 		if err != nil {
 			panic(fmt.Sprintf("Failed loading Gemini certificate/key: %v", err))
@@ -69,11 +71,9 @@ func StartGeminiServer() {
 	}
 }
 
-func missingCertsMessage(kind, certPath, keyPath string) string {
-	return fmt.Sprintf(
-		"Missing Gemini TLS %s file. Expected:\n  %s\n  %s\nGenerate with:\n  openssl req -new -newkey rsa:4096 -days 365 -nodes -x509 -subj \"/CN=localhost\" -keyout %s -out %s\n",
-		kind, certPath, keyPath, keyPath, certPath,
-	)
+func fileExists(path string) bool {
+	_, err := os.Stat(path)
+	return err == nil
 }
 
 // Gemini status/meta helpers
