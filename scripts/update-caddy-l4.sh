@@ -6,6 +6,9 @@
 #
 set -euo pipefail
 
+# Ensure Go and xcaddy are in PATH (needed for cron)
+export PATH="$PATH:/usr/local/go/bin:/root/go/bin:/home/${SUDO_USER:-root}/go/bin"
+
 # Configuration
 CADDY_BIN="/usr/bin/caddy"
 BACKUP_DIR="/usr/bin"
@@ -34,9 +37,16 @@ cleanup() {
 trap cleanup EXIT
 
 # Check for xcaddy
-if ! command -v xcaddy &> /dev/null; then
-    error_exit "xcaddy not found. Install with: go install github.com/caddyserver/xcaddy/cmd/xcaddy@latest"
+if ! command -v go &> /dev/null; then
+    error_exit "go not found. Install Go first."
 fi
+
+# Update xcaddy to latest version
+log "Updating xcaddy to latest version..."
+if ! go install github.com/caddyserver/xcaddy/cmd/xcaddy@latest; then
+    error_exit "Failed to install/update xcaddy"
+fi
+log "xcaddy updated: $(xcaddy version 2>/dev/null || echo 'version unknown')"
 
 # Check we're running as root (needed to replace system binary)
 if [[ $EUID -ne 0 ]]; then
