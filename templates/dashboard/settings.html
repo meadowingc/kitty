@@ -373,6 +373,19 @@
             <div id="passkeyEmpty" class="form-hint" style="font-size:.6rem; display:none;">
                 No passkeys registered yet.
             </div>
+
+            <div id="passwordLoginRow" style="margin-top:1.25rem; padding-top:1rem; border-top:1px solid var(--cozy-brown-100);">
+                <label style="display:flex; align-items:flex-start; gap:.6rem; cursor:pointer;">
+                    <input id="disablePasswordLogin" type="checkbox" style="margin-top:.2rem;">
+                    <span>
+                        <strong style="font-size:.7rem;">Require a passkey to sign in</strong>
+                        <div class="form-hint" style="font-size:.6rem; max-width:520px;">
+                            Disables username + password login for your account. You'll only be able to
+                            sign in with a registered passkey. You must have at least one passkey to enable this.
+                        </div>
+                    </span>
+                </label>
+            </div>
         </div>
     </div>
 
@@ -515,6 +528,7 @@
     const addBtn = document.getElementById('addPasskeyBtn');
     const nameInput = document.getElementById('passkeyName');
     const msg = document.getElementById('passkeyMsg');
+    const disableToggle = document.getElementById('disablePasswordLogin');
     if (!list || !addBtn) return;
 
     function setMsg(text, isError) {
@@ -547,10 +561,19 @@
       });
     }
 
+    function applyState(data) {
+      const items = (data && data.passkeys) || [];
+      render(items);
+      if (disableToggle) {
+        disableToggle.checked = !!(data && data.passwordLoginDisabled);
+        disableToggle.disabled = items.length === 0 && !disableToggle.checked;
+      }
+    }
+
     function load() {
       fetch('/dashboard/passkeys', { credentials: 'same-origin' })
         .then((r) => r.json())
-        .then(render)
+        .then(applyState)
         .catch(() => setMsg('Could not load passkeys.', true));
     }
 
@@ -568,6 +591,24 @@
       } catch (err) {
         setMsg('Could not remove passkey: ' + err.message, true);
       }
+    }
+
+    if (disableToggle) {
+      disableToggle.addEventListener('change', async () => {
+        const disable = disableToggle.checked;
+        try {
+          const resp = await fetch('/dashboard/passkeys/password-login?disable=' + disable, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'X-CSRF-Token': window.Passkeys.csrfToken() },
+          });
+          if (!resp.ok) throw new Error(await resp.text());
+          setMsg(disable ? 'Password login disabled. You must use a passkey now.' : 'Password login re-enabled.', false);
+        } catch (err) {
+          disableToggle.checked = !disable;
+          setMsg('Could not update setting: ' + err.message, true);
+        }
+      });
     }
 
     addBtn.addEventListener('click', async () => {

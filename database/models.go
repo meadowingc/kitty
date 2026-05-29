@@ -44,6 +44,7 @@ type AdminUser struct {
 	ShowBacklinks  bool   `gorm:"default:true"`
 	CustomCSS      string `gorm:"type:text"`
 	WebAuthnHandle []byte `gorm:"type:blob"`
+	PasswordLoginDisabled bool `gorm:"default:false"`
 	Passkeys       []Passkey `gorm:"foreignKey:AdminUserID"`
 }
 

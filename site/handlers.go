@@ -41,6 +41,11 @@ func UserSignIn(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		if admin.PasswordLoginDisabled {
+			http.Error(w, "Password login is disabled for this account. Please sign in with a passkey.", http.StatusUnauthorized)
+			return
+		}
+
 		err := bcrypt.CompareHashAndPassword([]byte(admin.PasswordHash), []byte(password))
 		if err != nil {
 			http.Error(w, "Invalid password", http.StatusUnauthorized)

@@ -394,7 +394,36 @@ func PasskeyList(w http.ResponseWriter, r *http.Request) {
 	for _, pk := range passkeys {
 		out = append(out, item{ID: pk.ID, Name: pk.Name, CreatedAt: pk.CreatedAt.Format("2006-01-02")})
 	}
-	writeJSON(w, http.StatusOK, out)
+	writeJSON(w, http.StatusOK, map[string]any{
+		"passkeys":              out,
+		"passwordLoginDisabled": user.PasswordLoginDisabled,
+	})
+}
+
+// PasskeySetPasswordLogin toggles whether password login is allowed for the
+// current user. Password login can only be disabled while at least one passkey
+// is registered, to avoid locking the user out.
+func PasskeySetPasswordLogin(w http.ResponseWriter, r *http.Request) {
+	user := getSignedInUserOrFail(r)
+
+	disable := r.URL.Query().Get("disable") == "true"
+
+	if disable {
+		var count int64
+		database.GetDB().Model(&database.Passkey{}).Where("admin_user_id = ?", user.ID).Count(&count)
+		if count == 0 {
+			http.Error(w, "Register a passkey before disabling password login", http.StatusBadRequest)
+			return
+		}
+	}
+
+	user.PasswordLoginDisabled = disable
+	if err := database.GetDB().Save(user).Error; err != nil {
+		http.Error(w, "Error updating login settings", http.StatusInternalServerError)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]bool{"passwordLoginDisabled": disable})
 }
 
 func PasskeyDelete(w http.ResponseWriter, r *http.Request) {
@@ -412,6 +441,15 @@ func PasskeyDelete(w http.ResponseWriter, r *http.Request) {
 	if result.Error != nil {
 		http.Error(w, "Error deleting passkey", http.StatusInternalServerError)
 		return
+	}
+
+	// Avoid locking the user out: if no passkeys remain, password login must be
+	// re-enabled.
+	var remaining int64
+	database.GetDB().Model(&database.Passkey{}).Where("admin_user_id = ?", user.ID).Count(&remaining)
+	if remaining == 0 && user.PasswordLoginDisabled {
+		user.PasswordLoginDisabled = false
+		database.GetDB().Save(user)
 	}
 
 	writeJSON(w, http.StatusOK, map[string]bool{"ok": true})

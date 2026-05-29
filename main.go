@@ -153,6 +153,7 @@ func initRouter() *chi.Mux {
 		r.Get("/passkeys", site.PasskeyList)
 		r.Post("/passkeys/register/begin", site.PasskeyRegisterBegin)
 		r.Post("/passkeys/register/finish", site.PasskeyRegisterFinish)
+		r.Post("/passkeys/password-login", site.PasskeySetPasswordLogin)
 		r.Post("/passkeys/{id}/delete", site.PasskeyDelete)
 	})
 
