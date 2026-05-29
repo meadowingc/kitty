@@ -2,7 +2,9 @@ package site
 
 import (
 	"encoding/json"
+	stdhtml "html"
 	"html/template"
+	"io"
 	"kitty/constants"
 	"kitty/database"
 	"log"
@@ -16,6 +18,7 @@ import (
 	"github.com/gorilla/csrf"
 
 	"github.com/gomarkdown/markdown"
+	"github.com/gomarkdown/markdown/ast"
 	"github.com/gomarkdown/markdown/html"
 	"github.com/gomarkdown/markdown/parser"
 	"gorm.io/datatypes"
@@ -61,8 +64,11 @@ func RenderTemplate(w http.ResponseWriter, r *http.Request, templateName string,
 		extensions := parser.CommonExtensions | parser.AutoHeadingIDs | parser.Footnotes | parser.Autolink
 		p := parser.NewWithExtensions(extensions)
 		doc := p.Parse([]byte(headerSrc))
-		htmlFlags := html.CommonFlags | html.HrefTargetBlank | html.FootnoteReturnLinks
-		opts := html.RendererOptions{Flags: htmlFlags}
+		htmlFlags := html.CommonFlags | html.HrefTargetBlank | html.FootnoteReturnLinks | html.SkipHTML
+		opts := html.RendererOptions{
+			Flags:          htmlFlags,
+			RenderNodeHook: safeMarkdownRenderHook,
+		}
 		renderer := html.NewRenderer(opts)
 		rendered := markdown.Render(doc, renderer)
 		headerHTML = template.HTML(rendered)
@@ -130,8 +136,11 @@ func RenderTemplate(w http.ResponseWriter, r *http.Request, templateName string,
 				p := parser.NewWithExtensions(extensions)
 				doc := p.Parse([]byte(processed))
 
-				htmlFlags := html.CommonFlags | html.HrefTargetBlank | html.FootnoteReturnLinks
-				opts := html.RendererOptions{Flags: htmlFlags}
+				htmlFlags := html.CommonFlags | html.HrefTargetBlank | html.FootnoteReturnLinks | html.SkipHTML
+				opts := html.RendererOptions{
+					Flags:          htmlFlags,
+					RenderNodeHook: safeMarkdownRenderHook,
+				}
 				renderer := html.NewRenderer(opts)
 
 				rendered := markdown.Render(doc, renderer)
@@ -164,4 +173,42 @@ func RenderTemplate(w http.ResponseWriter, r *http.Request, templateName string,
 		log.Printf("Template execution error: %v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
+}
+
+// isSafeURL checks if a given URL scheme is safe (preventing javascript/data protocol execution)
+func isSafeURL(urlStr string) bool {
+	urlStr = strings.TrimSpace(urlStr)
+	unescaped := stdhtml.UnescapeString(urlStr)
+	lower := strings.ToLower(unescaped)
+
+	// If no scheme is present, or if a path separator appears before the first colon,
+	// it's a relative path (e.g. /u/username/post, or u/username), which is safe.
+	colonIdx := strings.Index(lower, ":")
+	slashIdx := strings.Index(lower, "/")
+	if colonIdx == -1 || (slashIdx != -1 && slashIdx < colonIdx) {
+		return true
+	}
+
+	// Only allow specific safe protocols
+	scheme := lower[:colonIdx]
+	return scheme == "http" || scheme == "https" || scheme == "mailto" || scheme == "tel" || scheme == "gemini"
+}
+
+// safeMarkdownRenderHook intercepts ast.Link and ast.Image rendering to strip unsafe URL protocols
+func safeMarkdownRenderHook(w io.Writer, node ast.Node, entering bool) (ast.WalkStatus, bool) {
+	if link, ok := node.(*ast.Link); ok {
+		dest := string(link.Destination)
+		if !isSafeURL(dest) {
+			link.Destination = []byte("#")
+		}
+		return ast.GoToNext, false
+	}
+	if img, ok := node.(*ast.Image); ok {
+		dest := string(img.Destination)
+		if !isSafeURL(dest) {
+			img.Destination = []byte("")
+		}
+		return ast.GoToNext, false
+	}
+	return ast.GoToNext, false
 }

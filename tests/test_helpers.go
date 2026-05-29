@@ -126,6 +126,12 @@ func startTestServer(t *testing.T) {
 		r.HandleFunc("/delete-account", site.UserDeleteAccount)
 	})
 
+	r.Route("/api", func(r chi.Router) {
+		r.Route("/v1", func(r chi.Router) {
+			r.Get("/get-user-posts-messages/{userID}", site.GetUserPostsMessagesAPI)
+		})
+	})
+
 	// Serve static files
 	r.Handle("/assets/*", http.StripPrefix("/assets/", http.FileServer(http.Dir("./assets"))))
 
