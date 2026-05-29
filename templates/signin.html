@@ -24,6 +24,13 @@
     </div>
 </form>
 
+<div class="meta-card" style="margin:0 0 1.25rem;">
+    <div style="display:flex; flex-direction:column; gap:.6rem;">
+        <button id="passkeySignInBtn" type="button" class="btn-cozy-secondary">🔑 Sign in with a passkey</button>
+        <div id="passkeyMsg" class="form-hint" style="font-size:.6rem; min-height:1em;"></div>
+    </div>
+</div>
+
 <br />
 <div>
     <small>Don't have an account? Sign up <a href="/signup">here</a>.</small>
@@ -34,4 +41,32 @@
 </div>
 
 
+{{end}}
+
+{{define "scripts"}}
+<script src="/assets/js/passkeys.js"></script>
+<script>
+  (function () {
+    const btn = document.getElementById('passkeySignInBtn');
+    const msg = document.getElementById('passkeyMsg');
+    if (!btn) return;
+    if (!window.PublicKeyCredential) {
+      btn.style.display = 'none';
+      return;
+    }
+    btn.addEventListener('click', async () => {
+      msg.style.color = '';
+      msg.textContent = 'Follow your browser prompts…';
+      btn.disabled = true;
+      try {
+        const result = await window.Passkeys.login();
+        window.location.href = (result && result.redirect) || '/dashboard';
+      } catch (err) {
+        msg.style.color = '#b00020';
+        msg.textContent = 'Passkey sign-in failed: ' + (err.message || err);
+        btn.disabled = false;
+      }
+    });
+  })();
+</script>
 {{end}}

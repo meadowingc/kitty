@@ -22,7 +22,7 @@ func initDatabase() {
 	}
 
 	// Migrate the schema
-	err = db.AutoMigrate(&Post{}, &AdminUser{}, &Backlink{})
+	err = db.AutoMigrate(&Post{}, &AdminUser{}, &Backlink{}, &Passkey{})
 	if err != nil {
 		log.Fatalf("failed to migrate database: %v", err)
 	}

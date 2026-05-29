@@ -43,6 +43,19 @@ type AdminUser struct {
 	Emoji          string
 	ShowBacklinks  bool   `gorm:"default:true"`
 	CustomCSS      string `gorm:"type:text"`
+	WebAuthnHandle []byte `gorm:"type:blob"`
+	Passkeys       []Passkey `gorm:"foreignKey:AdminUserID"`
+}
+
+// Passkey stores a single WebAuthn credential belonging to an AdminUser.
+// Data holds the full webauthn.Credential serialized as JSON; CredentialID is
+// the base64url-encoded credential ID kept separately for fast lookups.
+type Passkey struct {
+	gorm.Model
+	AdminUserID  uint           `gorm:"index"`
+	Name         string
+	CredentialID string         `gorm:"uniqueIndex"`
+	Data         datatypes.JSON `gorm:"type:json"`
 }
 
 func (u *AdminUser) BeforeCreate(tx *gorm.DB) (err error) {

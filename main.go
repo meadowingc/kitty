@@ -128,6 +128,10 @@ func initRouter() *chi.Mux {
 	r.HandleFunc("/signup", site.UserSignUp)
 	r.Post("/logout", site.UserLogout)
 
+	// Passkey (WebAuthn) discoverable login for unauthenticated users.
+	r.Post("/passkeys/login/begin", site.PasskeyLoginBegin)
+	r.Post("/passkeys/login/finish", site.PasskeyLoginFinish)
+
 	r.With(site.AuthProtectedMiddleware).Route("/dashboard", func(r chi.Router) {
 		r.Get("/", site.UserDashboardHome)
 		r.Get("/list-posts", site.UserPostList)
@@ -144,6 +148,12 @@ func initRouter() *chi.Mux {
 
 		r.HandleFunc("/settings", site.UserSettings)
 		r.HandleFunc("/delete-account", site.UserDeleteAccount)
+
+		// Passkey (WebAuthn) management for the signed-in user.
+		r.Get("/passkeys", site.PasskeyList)
+		r.Post("/passkeys/register/begin", site.PasskeyRegisterBegin)
+		r.Post("/passkeys/register/finish", site.PasskeyRegisterFinish)
+		r.Post("/passkeys/{id}/delete", site.PasskeyDelete)
 	})
 
 	r.Get("/u/{username}/feed.xml", site.PublicUserRSSFeed)

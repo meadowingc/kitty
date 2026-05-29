@@ -171,6 +171,7 @@
         <button type="button" class="tab-btn" data-tab="appearance">Appearance</button>
         <button type="button" class="tab-btn" data-tab="homepage">Homepage</button>
         <button type="button" class="tab-btn" data-tab="data">Data</button>
+        <button type="button" class="tab-btn" data-tab="security">Security</button>
         <button type="button" class="tab-btn" data-tab="danger">Danger Zone</button>
     </div>
 
@@ -346,6 +347,35 @@
         </div>
     </form>
 
+    <!-- Security Tab (outside main form; uses JS + WebAuthn) -->
+    <div class="tab-content" data-tab="security">
+        <div class="meta-card" style="margin:0 0 1.25rem;">
+            <div class="meta-section-heading">
+                <h4>Passkeys</h4>
+            </div>
+            <p class="form-hint" style="font-size:.6rem; max-width:560px;">
+                Passkeys let you sign in without a password using your device's biometrics,
+                PIN, or a security key. They are phishing-resistant and more secure than passwords.
+                You can register more than one (e.g. a laptop and a phone).
+            </p>
+
+            <div style="display:flex; gap:.6rem; align-items:flex-end; flex-wrap:wrap; margin:1rem 0;">
+                <div class="field" style="margin:0;">
+                    <label for="passkeyName" class="form-label-sm">Passkey name</label>
+                    <input id="passkeyName" type="text" placeholder="e.g. My Laptop"
+                           autocomplete="off" class="input-cozy-sm" style="max-width:260px;">
+                </div>
+                <button id="addPasskeyBtn" type="button" class="btn-cozy">Add a passkey</button>
+            </div>
+            <div id="passkeyMsg" class="form-hint" style="font-size:.6rem; min-height:1em;"></div>
+
+            <ul id="passkeyList" style="list-style:none; padding:0; margin:1rem 0 0;"></ul>
+            <div id="passkeyEmpty" class="form-hint" style="font-size:.6rem; display:none;">
+                No passkeys registered yet.
+            </div>
+        </div>
+    </div>
+
     <!-- Danger Zone Tab (outside main form) -->
     <div class="tab-content" data-tab="danger">
         <div class="danger-zone-card">
@@ -379,6 +409,7 @@
 {{end}}
 
 {{define "scripts"}}
+<script src="/assets/js/passkeys.js"></script>
 <script>
   // Tab switching
   (function() {
@@ -476,5 +507,85 @@
       });
     }
   }
+
+  // Passkeys management
+  (function () {
+    const list = document.getElementById('passkeyList');
+    const empty = document.getElementById('passkeyEmpty');
+    const addBtn = document.getElementById('addPasskeyBtn');
+    const nameInput = document.getElementById('passkeyName');
+    const msg = document.getElementById('passkeyMsg');
+    if (!list || !addBtn) return;
+
+    function setMsg(text, isError) {
+      msg.textContent = text || '';
+      msg.style.color = isError ? '#b00020' : '';
+    }
+
+    function render(items) {
+      list.innerHTML = '';
+      if (!items || items.length === 0) {
+        empty.style.display = 'block';
+        return;
+      }
+      empty.style.display = 'none';
+      items.forEach((pk) => {
+        const li = document.createElement('li');
+        li.style.cssText = 'display:flex; align-items:center; justify-content:space-between; gap:.6rem; padding:.5rem .25rem; border-bottom:1px solid var(--cozy-brown-100);';
+        const label = document.createElement('span');
+        label.style.fontSize = '.7rem';
+        label.textContent = pk.name + '  ·  added ' + pk.createdAt;
+        const del = document.createElement('button');
+        del.type = 'button';
+        del.className = 'btn-cozy-ghost';
+        del.style.cssText = 'font-size:.55rem; padding:.25rem .55rem;';
+        del.textContent = 'Remove';
+        del.addEventListener('click', () => removePasskey(pk.id, pk.name));
+        li.appendChild(label);
+        li.appendChild(del);
+        list.appendChild(li);
+      });
+    }
+
+    function load() {
+      fetch('/dashboard/passkeys', { credentials: 'same-origin' })
+        .then((r) => r.json())
+        .then(render)
+        .catch(() => setMsg('Could not load passkeys.', true));
+    }
+
+    async function removePasskey(id, name) {
+      if (!window.confirm('Remove passkey "' + name + '"?')) return;
+      try {
+        const resp = await fetch('/dashboard/passkeys/' + id + '/delete', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'X-CSRF-Token': window.Passkeys.csrfToken() },
+        });
+        if (!resp.ok) throw new Error(await resp.text());
+        setMsg('Passkey removed.', false);
+        load();
+      } catch (err) {
+        setMsg('Could not remove passkey: ' + err.message, true);
+      }
+    }
+
+    addBtn.addEventListener('click', async () => {
+      setMsg('Follow your browser prompts…', false);
+      addBtn.disabled = true;
+      try {
+        await window.Passkeys.register(nameInput.value.trim() || 'Passkey');
+        setMsg('Passkey added!', false);
+        nameInput.value = '';
+        load();
+      } catch (err) {
+        setMsg('Could not add passkey: ' + (err.message || err), true);
+      } finally {
+        addBtn.disabled = false;
+      }
+    });
+
+    load();
+  })();
 </script>
 {{end}}

@@ -39,6 +39,7 @@ func RenderTemplate(w http.ResponseWriter, r *http.Request, templateName string,
 		CustomCSS        template.CSS
 		RequestPath      string
 		CSRFField        template.HTML
+		CSRFToken        string
 	}
 
 	currentUser := getSignedInUserOrNil(r)
@@ -95,6 +96,7 @@ func RenderTemplate(w http.ResponseWriter, r *http.Request, templateName string,
 			CustomCSS:        customCSS,
 			RequestPath:      r.URL.Path,
 			CSRFField:        csrf.TemplateField(r),
+			CSRFToken:        csrf.Token(r),
 		},
 		Data: data,
 	}
