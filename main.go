@@ -108,7 +108,7 @@ func initRouter() *chi.Mux {
 		}
 
 		var recent []homePost
-		database.GetDB().Table("posts").
+		database.GetDB().Model(&database.Post{}).
 			Select("posts.title, posts.slug, posts.published_date, admin_users.username").
 			Joins("JOIN admin_users ON admin_users.id = posts.admin_user_id").
 			Where("posts.published = ? AND posts.is_page = ? AND posts.show_on_homepage = ?", true, false, true).
