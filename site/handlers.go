@@ -968,3 +968,32 @@ func templateEscapeXML(s string) string {
 	}
 	return b.String()
 }
+
+// GetUserPostsMessagesAPI is an API endpoint that returns posts and pages for a specific user ID.
+// Accessible only to the logged-in user themselves to prevent unauthenticated access or draft leaks.
+func GetUserPostsMessagesAPI(w http.ResponseWriter, r *http.Request) {
+	userIDStr := chi.URLParam(r, "userID")
+	userIDUint, err := strconv.ParseUint(userIDStr, 10, 64)
+	if err != nil {
+		http.Error(w, "Invalid user ID", http.StatusBadRequest)
+		return
+	}
+
+	currentUser := getSignedInUserOrNil(r)
+	if currentUser == nil || currentUser.ID != uint(userIDUint) {
+		http.Error(w, "Forbidden - Access denied", http.StatusForbidden)
+		return
+	}
+
+	var posts []database.Post
+	result := database.GetDB().Where(&database.Post{AdminUserID: currentUser.ID}).
+		Limit(constants.MAX_POSTS_TO_SHOW).
+		Find(&posts)
+	if result.Error != nil {
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(posts)
+}

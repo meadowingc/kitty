@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"kitty/constants"
 	"kitty/database"
@@ -10,7 +9,6 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"strconv"
 	"syscall"
 	"time"
 
@@ -163,28 +161,7 @@ func initRouter() *chi.Mux {
 		r.Route("/v1", func(r chi.Router) {
 			// stricter limits on api endpoints
 			r.Use(httprate.LimitByIP(10, time.Minute))
-			r.Get("/get-user-posts-messages/{userID}", func(w http.ResponseWriter, r *http.Request) {
-
-				userID := chi.URLParam(r, "userID")
-
-				var posts []database.Post
-				userIDUint, err := strconv.ParseUint(userID, 10, 64)
-				if err != nil {
-					http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-					return
-				}
-
-				result := database.GetDB().Where(&database.Post{AdminUserID: uint(userIDUint)}).
-					Limit(constants.MAX_POSTS_TO_SHOW).
-					Find(&posts)
-				if result.Error != nil {
-					http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-					return
-				}
-
-				w.Header().Set("Content-Type", "application/json")
-				json.NewEncoder(w).Encode(posts)
-			})
+			r.Get("/get-user-posts-messages/{userID}", site.GetUserPostsMessagesAPI)
 		})
 	})
 

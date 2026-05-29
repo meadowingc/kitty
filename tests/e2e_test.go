@@ -2,6 +2,8 @@ package tests
 
 import (
 	"fmt"
+	"kitty/database"
+	"net/http"
 	"strings"
 	"testing"
 	"time"
@@ -370,6 +372,7 @@ func TestPublishUnpublishToggle(t *testing.T) {
 	}
 
 	// Publish the post - use JavaScript for both to avoid hanging
+	user.Page.MustSetCookies(user.Cookies...)
 	user.Page.MustEval(`() => document.getElementById('published').click()`)
 	user.Page.MustEval(`() => document.getElementById('submitButton').click()`)
 	time.Sleep(700 * time.Millisecond)
@@ -593,9 +596,9 @@ func TestCustomCSSSanitization(t *testing.T) {
 	user.Page.MustEval(`() => document.querySelector('.tab-btn[data-tab="appearance"]').click()`)
 	time.Sleep(200 * time.Millisecond)
 
-	// Try various XSS attempts via CSS
+	// Try various XSS attempts via CSS (including recursive tags designed to bypass single-pass replacements)
 	maliciousCSS := `body { color: black; }
-</style><script>alert('xss')</script><style>
+</st</styleyle><sc<scriptript>alert('xss')</sc</scriptript>
 body { background: url(javascript:alert('xss')); }
 div { -moz-binding: url('http://evil.com/xss.xml'); }
 span { behavior: url('script.htc'); }
@@ -632,5 +635,105 @@ p { background: expression(alert('xss')); }`
 	// But legitimate CSS should still work
 	if !strings.Contains(pageHTML, "color: black") {
 		t.Error("Legitimate CSS should be preserved")
+	}
+}
+
+// TestMarkdownXSSSanitization tests that raw HTML tags and unsafe link protocols are sanitized in posts
+func TestMarkdownXSSSanitization(t *testing.T) {
+	setupTestEnvironment(t)
+	defer cleanup()
+
+	user := createTestUser(t, "blogger", "password123")
+
+	// Create a post with various XSS vectors:
+	// 1. Raw HTML tag
+	// 2. Unsafe links (javascript protocol, HTML entity encoded javascript protocol)
+	// 3. Unsafe image source
+	payload := `This is a test post body.
+<script>alert('html-xss')</script>
+<iframe>inside iframe</iframe>
+[Safe Link](/u/blogger/safe)
+[Dangerous Link](javascript:alert(1))
+[Encoded Link](java&colon;script:alert(2))
+![Dangerous Image](javascript:alert(3))`
+
+	user.createPost(t, "Sanitized Post", payload, true)
+	time.Sleep(200 * time.Millisecond)
+
+	// Visit the public post view page
+	publicPage := getPublicPage(t)
+	publicPage.MustNavigate(testBaseURL + "/u/blogger/sanitized-post")
+	time.Sleep(500 * time.Millisecond)
+
+	pageHTML := publicPage.MustHTML()
+
+	// 1. Raw HTML tags should be skipped / omitted
+	if strings.Contains(pageHTML, "<script>alert('html-xss')") {
+		t.Error("Raw script tag was not stripped from markdown")
+	}
+	if strings.Contains(pageHTML, "<iframe>") {
+		t.Error("Raw iframe was not stripped from markdown")
+	}
+
+	// 2. Legitimate Markdown features should be preserved
+	if !strings.Contains(pageHTML, "/u/blogger/safe") {
+		t.Error("Safe link was not preserved")
+	}
+
+	// 3. Unsafe link protocols should be replaced with "#"
+	if strings.Contains(pageHTML, "javascript:alert(1)") || strings.Contains(pageHTML, "java&colon;script") {
+		t.Error("Dangerous javascript: link was not sanitized")
+	}
+
+	// 4. Unsafe image source should be empty
+	if strings.Contains(pageHTML, "src=\"javascript:") {
+		t.Error("Dangerous image source was not sanitized")
+	}
+}
+
+// TestAPIAccessProtection tests that API endpoints are auth-protected and reject unauthorized requests
+func TestAPIAccessProtection(t *testing.T) {
+	setupTestEnvironment(t)
+	defer cleanup()
+
+	user1 := createTestUser(t, "userone", "pass123")
+	_ = user1
+	user2 := createTestUser(t, "usertwo", "pass456")
+
+	// Fetch user IDs from db
+	var dbUser1 database.AdminUser
+	database.GetDB().Where("username = ?", "userone").First(&dbUser1)
+
+	// We'll test access using standard http client
+	client := &http.Client{}
+
+	// 1. Requesting userone's posts without cookies should fail (403 Forbidden)
+	req, _ := http.NewRequest("GET", fmt.Sprintf("%s/api/v1/get-user-posts-messages/%d", testBaseURL, dbUser1.ID), nil)
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Fatalf("Failed to perform request: %v", err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusForbidden {
+		t.Errorf("Expected 403 Forbidden for unauthenticated request, got: %d", resp.StatusCode)
+	}
+
+	// 2. Requesting userone's posts with usertwo's session should fail (403 Forbidden)
+	// We get usertwo's cookies
+	cookies := user2.Page.MustCookies()
+	cookieHeaders := make([]string, 0, len(cookies))
+	for _, c := range cookies {
+		cookieHeaders = append(cookieHeaders, fmt.Sprintf("%s=%s", c.Name, c.Value))
+	}
+	
+	req, _ = http.NewRequest("GET", fmt.Sprintf("%s/api/v1/get-user-posts-messages/%d", testBaseURL, dbUser1.ID), nil)
+	req.Header.Set("Cookie", strings.Join(cookieHeaders, "; "))
+	resp, err = client.Do(req)
+	if err != nil {
+		t.Fatalf("Failed to perform request: %v", err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusForbidden {
+		t.Errorf("Expected 403 Forbidden for unauthorized request, got: %d", resp.StatusCode)
 	}
 }

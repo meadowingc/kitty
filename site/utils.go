@@ -158,6 +158,9 @@ func sanitizeCustomCSS(css string) string {
 	// Remove null bytes which could be used to bypass filters
 	css = strings.ReplaceAll(css, "\x00", "")
 
+	// Prevent style tag breakout by replacing '<' with CSS escape '\3c '
+	css = strings.ReplaceAll(css, "<", `\3c `)
+
 	// Case-insensitive patterns for dangerous content
 	// 1. Style/script tag injection attempts
 	closeStyleRe := regexp.MustCompile(`(?i)<\s*/\s*style`)
