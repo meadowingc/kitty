@@ -446,12 +446,7 @@ func CreatePost(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// Extract and save backlinks asynchronously
-		go func(postID uint, body string) {
-			post := database.Post{Body: body}
-			post.ID = postID
-			_ = ExtractAndSaveBacklinks(&post)
-		}(newPost.ID, newPost.Body)
+		UpdateBacklinksAsync(newPost.ID, newPost.Body)
 
 		http.Redirect(w, r, "/dashboard/post/"+strconv.Itoa(int(newPost.ID)), http.StatusSeeOther)
 	default:
@@ -548,12 +543,7 @@ func UpdatePost(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// Extract and save backlinks asynchronously
-		go func(postID uint, body string) {
-			post := database.Post{Body: body}
-			post.ID = postID
-			_ = ExtractAndSaveBacklinks(&post)
-		}(post.ID, post.Body)
+		UpdateBacklinksAsync(post.ID, post.Body)
 
 		// For AJAX requests, return the new timestamp; for form submissions, redirect
 		if r.Header.Get("Accept") == "application/json" || r.Header.Get("X-Requested-With") == "XMLHttpRequest" {

@@ -3,9 +3,30 @@ package site
 import (
 	"kitty/constants"
 	"kitty/database"
+	"log"
 	"regexp"
 	"strings"
+	"sync"
 )
+
+var backlinkWork sync.WaitGroup
+
+func UpdateBacklinksAsync(postID uint, body string) {
+	backlinkWork.Add(1)
+	go func() {
+		defer backlinkWork.Done()
+		post := database.Post{Body: body}
+		post.ID = postID
+		if err := ExtractAndSaveBacklinks(&post); err != nil {
+			log.Printf("Updating backlinks for post %d: %v", postID, err)
+		}
+	}()
+}
+
+// WaitForBacklinks must run after HTTP requests have drained, so no new work can be accepted.
+func WaitForBacklinks() {
+	backlinkWork.Wait()
+}
 
 // Regex to match markdown links: [text](url)
 var markdownLinkRe = regexp.MustCompile(`\[([^\]]+)\]\(([^)]+)\)`)

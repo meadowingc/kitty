@@ -3,6 +3,7 @@ package site
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
@@ -14,7 +15,9 @@ import (
 	"os"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	gmtext "git.sr.ht/~kota/goldmark-gemtext"
@@ -22,52 +25,70 @@ import (
 	"github.com/yuin/goldmark/extension"
 )
 
-const (
-	geminiListenPort = ":19666"
-	geminiCertFile   = "cert/gemini_cert.pem"
-	geminiKeyFile    = "cert/gemini_key.pem"
-)
-
-func StartGeminiServer() {
+func NewGeminiListener() (net.Listener, error) {
+	addr := os.Getenv("KITTY_GEMINI_ADDR")
+	if addr == "" {
+		addr = ":19666"
+	}
+	geminiCertFile := os.Getenv("KITTY_GEMINI_CERT")
+	if geminiCertFile == "" {
+		geminiCertFile = "cert/gemini_cert.pem"
+	}
+	geminiKeyFile := os.Getenv("KITTY_GEMINI_KEY")
+	if geminiKeyFile == "" {
+		geminiKeyFile = "cert/gemini_key.pem"
+	}
+	requireTLS := false
+	if value := os.Getenv("KITTY_REQUIRE_TLS"); value != "" {
+		var err error
+		requireTLS, err = strconv.ParseBool(value)
+		if err != nil {
+			return nil, fmt.Errorf("KITTY_REQUIRE_TLS: %w", err)
+		}
+	}
 	// Auto-detect TLS mode: use plaintext only if explicitly set OR if certs don't exist
 	certsExist := fileExists(geminiCertFile) && fileExists(geminiKeyFile)
 	forcePlaintext := os.Getenv("GEMINI_PLAINTEXT") == "1"
 	useTLS := certsExist && !forcePlaintext
-
-	var ln net.Listener
-	var err error
-
-	if !useTLS {
-		if forcePlaintext {
-			log.Printf("Gemini: GEMINI_PLAINTEXT=1, running in plaintext mode")
-		} else {
-			log.Printf("Gemini: No certificates found at %s, running in plaintext mode", geminiCertFile)
-		}
-		ln, err = net.Listen("tcp", geminiListenPort)
-		if err != nil {
-			panic(fmt.Sprintf("Failed starting Gemini plaintext listener: %v", err))
-		}
-		log.Printf("Gemini (PLAINTEXT mode) listening on %s (expect external TLS termination)", geminiListenPort)
-	} else {
-		certPair, err := tls.LoadX509KeyPair(geminiCertFile, geminiKeyFile)
-		if err != nil {
-			panic(fmt.Sprintf("Failed loading Gemini certificate/key: %v", err))
-		}
-		cfg := &tls.Config{Certificates: []tls.Certificate{certPair}, MinVersion: tls.VersionTLS12}
-		ln, err = tls.Listen("tcp", geminiListenPort, cfg)
-		if err != nil {
-			panic(fmt.Sprintf("Failed starting Gemini TLS listener: %v", err))
-		}
-		log.Printf("Gemini (TLS mode) listening on gemini://localhost%s", geminiListenPort)
+	if requireTLS && !useTLS {
+		return nil, fmt.Errorf("Gemini requires TLS: check certificate paths and GEMINI_PLAINTEXT")
 	}
+	if !useTLS {
+		log.Print("Gemini running in plaintext mode; external TLS termination is required in production")
+		return net.Listen("tcp", addr)
+	}
+	certPair, err := tls.LoadX509KeyPair(geminiCertFile, geminiKeyFile)
+	if err != nil {
+		return nil, fmt.Errorf("loading Gemini certificate/key: %w", err)
+	}
+	cfg := &tls.Config{Certificates: []tls.Certificate{certPair}, MinVersion: tls.VersionTLS12}
+	return tls.Listen("tcp", addr, cfg)
+}
+
+func ServeGemini(ctx context.Context, ln net.Listener) error {
+	stop := context.AfterFunc(ctx, func() { ln.Close() })
+	defer stop()
+	defer ln.Close()
+	var requests sync.WaitGroup
+	defer requests.Wait()
 	for {
 		c, err := ln.Accept()
 		if err != nil {
-			log.Printf("Gemini accept error: %v", err)
+			if ctx.Err() != nil {
+				return nil
+			}
+			return fmt.Errorf("Gemini accept: %w", err)
+		}
+		if err := c.SetDeadline(time.Now().Add(30 * time.Second)); err != nil {
+			log.Printf("Gemini connection deadline: %v", err)
+			c.Close()
 			continue
 		}
-		log.Printf("Gemini: new connection from %s", c.RemoteAddr().String())
-		go handleGeminiConn(c)
+		requests.Add(1)
+		go func() {
+			defer requests.Done()
+			handleGeminiConn(c)
+		}()
 	}
 }
 

@@ -1,0 +1,39 @@
+[Unit]
+Description=Kitty web and Gemini publishing
+Wants=network-online.target
+After=network-online.target
+RequiresMountsFor=/mnt/volume-hel1-1/kitty-state
+AssertPathIsMountPoint=/mnt/volume-hel1-1
+StartLimitIntervalSec=300
+StartLimitBurst=5
+
+[Service]
+Type=exec
+User=kitty
+Group=kitty
+WorkingDirectory=/opt/kitty/current
+EnvironmentFile=/etc/kitty/kitty.env
+ExecStartPre=/usr/bin/test -s /mnt/volume-hel1-1/kitty-state/kitty.db
+ExecStartPre=/usr/bin/test -s /etc/kitty/cert/gemini_cert.pem
+ExecStartPre=/usr/bin/test -s /etc/kitty/cert/gemini_key.pem
+ExecStart=/opt/kitty/current/kitty
+Restart=on-failure
+RestartSec=5
+KillMode=mixed
+TimeoutStopSec=120
+SendSIGKILL=no
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/mnt/volume-hel1-1/kitty-state
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+RestrictSUIDSGID=true
+
+[Install]
+WantedBy=multi-user.target

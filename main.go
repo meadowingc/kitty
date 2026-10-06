@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"kitty/constants"
 	"kitty/database"
@@ -22,30 +23,14 @@ import (
 
 func main() {
 	// Load .env file if present (non-fatal if missing)
-	_ = godotenv.Load()
-
-	_ = database.GetDB() // force database initialization
-	r := initRouter()
-
-	signals := make(chan os.Signal, 1)
-	signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM)
-
-	const portNum = ":6835"
-	go func() {
-		log.Printf("Running on http://localhost%s", portNum)
-		if err := http.ListenAndServe(portNum, r); err != nil {
-			log.Printf("HTTP server stopped: %v", err)
-		}
-	}()
-
-	go site.StartGeminiServer()
-
-	// Block until a signal is received
-	<-signals
-	log.Println("Shutting down gracefully...")
-
-	// Close the database connection
-	database.CloseDB()
+	if err := godotenv.Load(); err != nil && !os.IsNotExist(err) {
+		log.Fatalf("Loading .env: %v", err)
+	}
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+	if err := run(ctx); err != nil {
+		log.Fatal(err)
+	}
 }
 
 func initRouter() *chi.Mux {
