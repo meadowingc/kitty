@@ -77,6 +77,8 @@ Run isolated authenticated/browser acceptance against the staged release before
 rerunning without `--rehearse`. The installer temporarily takes only Kitty's
 HTTP/Gemini proxy routes out of service, drains old connections and waits for
 stable database contents before stopping the exact old wrapper/application.
+The drain allows up to five minutes, including Caddy's idle backend connection
+timeout; a timeout restores routing and leaves the old processes untouched.
 It does not stop tmux or the interactive shell. It retains the old installation,
 copies SQLite with the backup API, verifies complete logical equality, preserves
 the secret/certificate identity, and changes only Kitty's Backuper sources and

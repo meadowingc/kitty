@@ -301,6 +301,7 @@ class Installer:
         self.pending = self.root / "deployment-pending.json"
         self.backup_config = system_root / "etc/backuper/config.toml"
         self.backup_unit = system_root / "etc/systemd/system/backuper.service"
+        self.caddy = system_root / "etc/caddy/Caddyfile"
         self.checks = system_root / "var/lib/kitty-deploy-checks"
 
     def run(self, arguments, timeout=180, check=True):
@@ -372,7 +373,7 @@ class Installer:
         if legacy is None:
             yield
             return
-        path = Path("/etc/caddy/Caddyfile")
+        path = self.caddy
         original, mode = path.read_text(), path.stat().st_mode & 0o777
         with socket.socket() as blocked:
             blocked.bind(("127.0.0.1", 0))
@@ -389,7 +390,8 @@ class Installer:
                 path.chmod(mode)
                 self.run(["caddy", "reload", "--config", str(path), "--adapter", "caddyfile"])
                 self.record("maintenance")
-                deadline, stable_since, previous = time.monotonic() + 120, None, None
+                # Caddy may retain idle backend sockets for two minutes after a route reload.
+                deadline, stable_since, previous = time.monotonic() + 300, None, None
                 while True:
                     require(process_identity(legacy["app"]["pid"]) == legacy["app"], "Legacy process changed during drain")
                     connections = self.run(["ss", "-Hnt", "state", "established", "( sport = :6835 or sport = :19666 )"])
@@ -775,8 +777,11 @@ def main():
         except BaseException:
             if installer.pending.exists():
                 installer.record("needs_recovery")
-            elif not (installer.stage / "deployment.json").exists():
-                installer.record("failed")
+            else:
+                record = installer.stage / "deployment.json"
+                previous = json.loads(record.read_text()) if record.exists() else {}
+                if previous.get("status") != "rolled_back":
+                    installer.record("failed", last_phase=previous.get("status"))
             raise
         return
     parser = argparse.ArgumentParser(description=__doc__)

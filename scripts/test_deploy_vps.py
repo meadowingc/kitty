@@ -327,6 +327,48 @@ class ActivationTests(unittest.TestCase):
         self.assertEqual(deploy.read_digest(self.installer.database), self.original)
         self.assertEqual(list(self.installer.checks.iterdir()), [])
 
+    def maintenance_fixture(self, idle_until):
+        self.installer.legacy.mkdir(parents=True)
+        create_database(self.installer.legacy / "kitty.db")
+        self.installer.caddy.parent.mkdir(parents=True)
+        self.caddy_before = "kitty {\n reverse_proxy :6835\n}\nroute {\n proxy localhost:19666\n}\n"
+        self.installer.caddy.write_text(self.caddy_before)
+        self.clock = 0
+        self.enterContext(patch("deploy_vps.time.monotonic", side_effect=lambda: self.clock))
+
+        def sleep(seconds):
+            self.clock += seconds
+
+        self.enterContext(patch("deploy_vps.time.sleep", side_effect=sleep))
+        self.enterContext(patch("deploy_vps.process_identity", return_value={"pid": 123}))
+        self.enterContext(patch("deploy_vps.request", return_value=(200, {}, b'{"fixture":true}')))
+
+        def command(args, **kwargs):
+            if args[:2] == ["caddy", "adapt"]:
+                return '{"fixture":true}'
+            if args[0] == "ss":
+                return "idle backend socket" if self.clock < idle_until else ""
+            return ""
+
+        self.enterContext(patch.object(self.installer, "run", side_effect=command))
+
+    def test_maintenance_allows_proxy_idle_timeout_then_stable_database(self):
+        self.maintenance_fixture(130)
+        with self.installer.maintenance({"app": {"pid": 123}}):
+            self.assertGreaterEqual(self.clock, 139)
+            self.assertNotEqual(self.installer.caddy.read_text(), self.caddy_before)
+        self.assertEqual(self.installer.caddy.read_text(), self.caddy_before)
+
+    def test_maintenance_timeout_restores_routing_without_signalling(self):
+        self.maintenance_fixture(1000)
+        with patch("deploy_vps.stop_exact") as stop:
+            with self.assertRaisesRegex(deploy.DeploymentError, "did not drain"):
+                with self.installer.maintenance({"app": {"pid": 123}}):
+                    self.fail("A busy application must not reach cutover")
+            stop.assert_not_called()
+        self.assertEqual(self.clock, 300)
+        self.assertEqual(self.installer.caddy.read_text(), self.caddy_before)
+
 
 if __name__ == "__main__":
     unittest.main()
