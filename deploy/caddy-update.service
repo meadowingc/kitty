@@ -1,0 +1,15 @@
+[Unit]
+Description=Guarded pinned Caddy layer4 infrastructure update
+Wants=network-online.target
+After=network-online.target
+RequiresMountsFor=/mnt/volume-hel1-1
+
+[Service]
+Type=oneshot
+User=root
+UMask=0077
+ExecStart=/usr/local/sbin/update-caddy-l4
+TimeoutStartSec=45min
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
