@@ -334,11 +334,26 @@ class UpdaterTests(unittest.TestCase):
     def test_uncovered_storage_and_certificate_loaders_are_rejected(self):
         updater = FakeUpdater(self.root)
         for configuration in ({"storage": {"module": "file_system", "root": "/uncovered"}},
-                              {"apps": {"tls": {"certificates": {"load_files": []}}}}):
+                              *({"apps": {"tls": {"certificates": certificates}}}
+                                for certificates in (
+                                    {"load_files": []}, {"load_folders": []}, {"load_pem": []},
+                                    {"automate": ["public.example"], "load_files": []},
+                                    {"automate": "public.example"}, {"automate": [None]},
+                                    {"automate": [""]}, {"automate": ["{env.PUBLIC_HOST}"]},
+                                    {"automate": ["public.example}"]}, [], None,
+                                ))):
             with self.subTest(configuration=configuration), \
                     patch.object(updater, "run", return_value=json.dumps(configuration)):
                 with self.assertRaisesRegex(RuntimeError, "separately reviewed coverage"):
                     d.Updater.adapted(updater)
+
+    def test_explicit_automation_uses_already_covered_storage(self):
+        updater = FakeUpdater(self.root)
+        for certificates in ({}, {"automate": []}, {"automate": ["public.example", "second.example"]}):
+            configuration = {"apps": {"tls": {"certificates": certificates}}}
+            with self.subTest(certificates=certificates), \
+                    patch.object(updater, "run", return_value=json.dumps(configuration)):
+                self.assertEqual(d.Updater.adapted(updater), configuration)
 
 
 if __name__ == "__main__":

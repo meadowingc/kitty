@@ -75,6 +75,25 @@ such as authentication redirects or404s are baselines, not claims of application
 functional correctness; public checks require valid HTTPS and HTTP200.
 Candidate validation runs as the service user with disposable isolated storage.
 
+Explicit `tls force_automate` subjects are supported: they use the same covered
+default Caddy storage, not manually loaded certificate files. Custom storage,
+other certificate loaders and placeholder-expanded automation subjects still
+require separate review. A public alias alongside an internally issued wildcard
+needs both its public issuer and explicit automation; otherwise Caddy prefers the
+wildcard and may never request the public certificate:
+
+```caddyfile
+public-alias.example {
+    tls {
+        ca https://acme-v02.api.letsencrypt.org/directory
+        force_automate
+    }
+    reverse_proxy 127.0.0.1:8080
+}
+```
+
+This does not change wildcard issuance, proxying or TLS policy for other sites.
+
 The updater serializes with Backuper and itself. It saves the original binary,
 complete stopped Caddy storage and configuration with durable private receipts
 before switching. Recovery never restores old certificates, ACME accounts or

@@ -187,8 +187,12 @@ class Updater:
 
     def adapted(self, binary=None):
         configuration = json.loads(self.run([str(binary or self.binary), "adapt", "--config", str(self.config)]))
+        certificates = configuration.get("apps", {}).get("tls", {}).get("certificates", {})
         require(not configuration.get("storage")
-                and not configuration.get("apps", {}).get("tls", {}).get("certificates"),
+                and isinstance(certificates, dict) and set(certificates) <= {"automate"}
+                and isinstance(certificates.get("automate", []), list)
+                and all(isinstance(name, str) and name and not any(char in name for char in "{}")
+                        for name in certificates.get("automate", [])),
                 "Custom storage/certificate loaders require separately reviewed coverage")
         return configuration
 
