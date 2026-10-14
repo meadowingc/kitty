@@ -84,15 +84,16 @@ wildcard and may never request the public certificate:
 
 ```caddyfile
 public-alias.example {
-    tls {
+    tls force_automate {
         ca https://acme-v02.api.letsencrypt.org/directory
-        force_automate
     }
     reverse_proxy 127.0.0.1:8080
 }
 ```
 
 This does not change wildcard issuance, proxying or TLS policy for other sites.
+The pinned Caddy v2.10.2 requires `force_automate` as the directive argument,
+not as a subdirective inside the block.
 
 The updater serializes with Backuper and itself. It saves the original binary,
 complete stopped Caddy storage and configuration with durable private receipts
